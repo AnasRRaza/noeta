@@ -28,7 +28,7 @@ def compile_noeta(source_code: str) -> str:
     except Exception as e:
         raise RuntimeError(f"Compilation error: {str(e)}")
 
-def execute_noeta(source_code: str, verbose: bool = True):
+def execute_noeta(source_code: str, verbose: bool = False):
     """Compile and execute Noeta source code."""
     try:
         # Compile to Python
@@ -55,8 +55,8 @@ def execute_noeta(source_code: str, verbose: bool = True):
 def main():
     """Main entry point for command-line execution."""
     if len(sys.argv) < 2:
-        print("Usage: python noeta_runner.py <noeta_file>")
-        print("   or: python noeta_runner.py -c '<noeta_code>'")
+        print("Usage: noeta <noeta_file>")
+        print("   or: noeta -c '<noeta_code>'")
         sys.exit(1)
     
     if sys.argv[1] == '-c':

@@ -25,6 +25,8 @@ class NoetaKernel(Kernel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.namespace = {}
+        # Add get_ipython to namespace so generated code can detect Jupyter environment
+        self.namespace['get_ipython'] = lambda: self
     
     def do_execute(self, code, silent, store_history=True,
                    user_expressions=None, allow_stdin=False):
@@ -67,28 +69,34 @@ class NoetaKernel(Kernel):
                 self.send_response(self.iopub_socket, 'stream', stream_content)
             
             # Check if matplotlib figure exists
-            import matplotlib.pyplot as plt
-            if plt.get_fignums():
-                # Save and display the figure
+            # Import matplotlib from the execution namespace to check for figures
+            if 'plt' in self.namespace:
+                import matplotlib.pyplot as plt
                 import base64
                 from io import BytesIO
-                
-                buf = BytesIO()
-                plt.savefig(buf, format='png', bbox_inches='tight')
-                buf.seek(0)
-                
-                # Send image data
-                image_data = base64.b64encode(buf.read()).decode()
-                content = {
-                    'data': {
-                        'image/png': image_data
-                    },
-                    'metadata': {}
-                }
-                self.send_response(self.iopub_socket, 'display_data', content)
-                
-                # Clear the figure for next plot
-                plt.close('all')
+
+                # Check if there are any figures
+                if plt.get_fignums():
+                    # Save and display each figure
+                    for fig_num in plt.get_fignums():
+                        fig = plt.figure(fig_num)
+                        buf = BytesIO()
+                        fig.savefig(buf, format='png', bbox_inches='tight', dpi=100)
+                        buf.seek(0)
+
+                        # Send image data
+                        image_data = base64.b64encode(buf.read()).decode()
+                        content = {
+                            'data': {
+                                'image/png': image_data
+                            },
+                            'metadata': {}
+                        }
+                        self.send_response(self.iopub_socket, 'display_data', content)
+                        buf.close()
+
+                    # Clear all figures for next execution
+                    plt.close('all')
             
             return {
                 'status': 'ok',

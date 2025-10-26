@@ -29,11 +29,21 @@ class CodeGenerator:
         result += "plt.style.use('seaborn-v0_8-darkgrid')\n"
         result += "sns.set_palette('husl')\n\n"
         result += "\n".join(self.code_lines)
-        
+
         # Show plots if any visualization was created
+        # Behavior depends on execution environment:
+        # - Jupyter: plots display inline (kernel handles it)
+        # - VS Code/CLI: plots open in separate windows (plt.show())
         if self.last_plot:
-            result += "\n\n# Display plots\nplt.tight_layout()\nplt.show()"
-        
+            result += "\n\n# Display plots\n"
+            result += "plt.tight_layout()\n"
+            result += "try:\n"
+            result += "    get_ipython()\n"
+            result += "    # Running in Jupyter/IPython - don't show (kernel will display inline)\n"
+            result += "except NameError:\n"
+            result += "    # Running in VS Code/CLI - show plots in separate windows\n"
+            result += "    plt.show()"
+
         return result
     
     def visit(self, node: ASTNode):
