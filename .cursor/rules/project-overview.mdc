@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+
+# Noeta DSL - Project Architecture
+
+Noeta is a Domain-Specific Language (DSL) for data analysis that compiles to Python/Pandas code.
+
+## Architecture Components
+
+### 1. Compiler Pipeline
+The project follows a classic compiler architecture:
+
+- **[noeta_lexer.py](mdc:noeta_lexer.py)** - Tokenizes input source code into tokens
+- **[noeta_parser.py](mdc:noeta_parser.py)** - Builds Abstract Syntax Tree (AST) from tokens
+- **[noeta_ast.py](mdc:noeta_ast.py)** - Defines all AST node types using dataclasses
+- **[noeta_codegen.py](mdc:noeta_codegen.py)** - Generates Python/Pandas code from AST using visitor pattern
+- **[noeta_runner.py](mdc:noeta_runner.py)** - Executes Noeta scripts (CLI interface)
+- **[noeta_kernel.py](mdc:noeta_kernel.py)** - Jupyter kernel integration
+
+### 2. Language Features
+Noeta supports 25+ operations organized into:
+
+- **Data Manipulation**: load, select, filter, sort, join, groupby, sample, dropna, fillna, mutate, apply
+- **Analysis**: describe, summary, info, outliers, quantile, normalize, binning, rolling, hypothesis
+- **Visualization**: boxplot, heatmap, pairplot, timeseries, pie
+- **File Operations**: save, export_plot
+
+### 3. Key Design Patterns
+
+- **Visitor Pattern**: CodeGenerator uses visitor pattern to traverse AST nodes
+- **Symbol Table**: Tracks variable aliases and their corresponding data frames
+- **Immutability**: All transformations create new aliases (functional style)
+
+### 4. Integration Points
+
+- **Command Line**: `python noeta_runner.py <script.noeta>`
+- **Jupyter**: Custom kernel allows `.noeta` code in notebook cells
+- **VS Code**: `.noeta` files can be executed via Python runner
+
+## Development Guidelines
+
+1. When adding new operations, update all 4 core files: lexer → parser → AST → codegen
+2. Maintain the functional style: operations always use `as new_alias` to create new bindings
+3. Generated Python code should be readable and use idiomatic Pandas
+4. Error messages should refer to DSL syntax, not internal Python errors
+5. All operations generate user-friendly print statements for feedback

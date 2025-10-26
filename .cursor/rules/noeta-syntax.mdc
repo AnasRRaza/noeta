@@ -1,0 +1,187 @@
+---
+globs: *.noeta
+---
+
+# Noeta DSL Syntax Reference
+
+## General Syntax Rules
+
+- Comments start with `#` and continue to end of line
+- String literals use double quotes: `"filename.csv"`
+- Column lists use braces: `{col1, col2, col3}`
+- Conditions use brackets: `[price > 100]`
+- All transformations use `as new_alias` to create new data bindings
+
+## Data Loading
+
+```noeta
+load "path/to/file.csv" as dataset_name
+```
+
+Supports: `.csv`, `.json`, `.xlsx`, `.xls`
+
+## Data Manipulation
+
+### Select Columns
+```noeta
+select dataset {column1, column2} as subset
+```
+
+### Filter Rows
+```noeta
+filter dataset [column > value] as filtered
+filter dataset [category == "Electronics"] as filtered
+```
+
+Operators: `>`, `<`, `>=`, `<=`, `==`, `!=`
+
+### Sort Data
+```noeta
+sort dataset by: column as sorted
+sort dataset by: col1 desc, col2 as sorted
+```
+
+### Join Datasets
+```noeta
+join dataset1 with: dataset2 on: common_column as joined
+```
+
+### Group By & Aggregate
+```noeta
+groupby dataset by: {category} agg: {sum:quantity, avg:price, count:id} as summary
+```
+
+Aggregation functions: `sum`, `avg`, `mean`, `count`, `min`, `max`, `std`
+
+### Sample Data
+```noeta
+sample dataset n: 100 as sample_data
+sample dataset n: 50 random as random_sample
+```
+
+### Handle Missing Values
+```noeta
+dropna dataset as clean_data
+dropna dataset columns: {col1, col2} as clean_data
+fillna dataset value: 0 as filled_data
+fillna dataset value: "Unknown" columns: {city} as filled_data
+```
+
+### Create/Modify Columns
+```noeta
+mutate dataset {total: "price * quantity", discounted: "price * 0.9"} as enhanced
+```
+
+## Analysis Operations
+
+### Descriptive Statistics
+```noeta
+describe dataset
+describe dataset columns: {price, quantity}
+summary dataset
+info dataset
+```
+
+### Outlier Detection
+```noeta
+outliers dataset method: iqr columns: {price}
+outliers dataset method: zscore columns: {price, quantity}
+```
+
+### Quantiles
+```noeta
+quantile dataset column: price q: 0.95
+quantile dataset columns: price q: 0.95  # 'columns' also accepted
+```
+
+### Normalization
+```noeta
+normalize dataset columns: {price, quantity} method: zscore as normalized
+normalize dataset columns: {price} method: minmax as normalized
+```
+
+### Binning
+```noeta
+binning dataset column: price bins: 5 as binned
+binning dataset columns: price bins: 5 as binned  # 'columns' also accepted
+```
+
+### Rolling Window
+```noeta
+rolling dataset column: price window: 3 function: mean as rolling_avg
+rolling dataset columns: price window: 3 function: mean as rolling_avg  # 'columns' also accepted
+```
+
+### Hypothesis Testing
+```noeta
+hypothesis group1 vs: group2 columns: {price} test: ttest_ind
+```
+
+## Visualization
+
+### Box Plot
+```noeta
+boxplot dataset columns: {price, quantity}
+```
+
+### Correlation Heatmap
+```noeta
+heatmap dataset columns: {price, quantity, discount}
+```
+
+### Pair Plot
+```noeta
+pairplot dataset columns: {col1, col2, col3}
+```
+
+### Time Series
+```noeta
+timeseries dataset x: date y: value
+```
+
+### Pie Chart
+```noeta
+pie dataset values: amount labels: category
+```
+
+## File Operations
+
+### Save Data
+```noeta
+save dataset to: "output.csv" format: csv
+save dataset to: "output.json" format: json
+save dataset to: "output.parquet" format: parquet
+```
+
+### Export Plots
+```noeta
+export_plot filename: "chart.png" width: 1200 height: 800
+```
+
+## Best Practices
+
+1. **Immutable Transformations**: Always use `as new_alias` - never modify in place
+2. **Descriptive Aliases**: Use meaningful names like `filtered_expensive` not `temp1`
+3. **Pipeline Structure**: Chain operations logically from load → transform → analyze → visualize
+4. **Comments**: Document complex transformations or business logic
+5. **Column Names**: Reference columns without quotes in DSL operations
+
+## Example Workflow
+
+```noeta
+# Load and clean data
+load "data/sales_data.csv" as sales
+dropna sales columns: {price, quantity} as clean_sales
+
+# Transform
+select clean_sales {product_id, category, price, quantity} as products
+filter products [price > 50] as expensive
+mutate expensive {revenue: "price * quantity"} as with_revenue
+
+# Analyze
+groupby with_revenue by: {category} agg: {sum:revenue, count:product_id} as summary
+describe summary
+
+# Visualize
+boxplot expensive columns: {price}
+```

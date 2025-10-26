@@ -1,0 +1,19 @@
+# Basic Noeta Demo Script
+# This demonstrates core data manipulation features
+
+# Load data
+load "data/sales_data.csv" as sales
+
+# Basic operations
+select sales {product_id, category, price, quantity} as products
+filter products [price > 50] as expensive_products
+
+# Aggregation
+groupby sales by: {category} agg: {sum:quantity, avg:price} as category_summary
+
+# Analysis
+describe expensive_products
+info category_summary
+
+# Visualization
+boxplot expensive_products columns: {price}

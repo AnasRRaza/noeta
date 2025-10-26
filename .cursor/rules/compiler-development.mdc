@@ -1,0 +1,176 @@
+---
+description: Guidelines for extending the Noeta compiler with new operations
+---
+
+# Adding New Operations to Noeta
+
+When adding a new operation to the Noeta DSL, follow these steps in order:
+
+## 1. Update Lexer ([noeta_lexer.py](mdc:noeta_lexer.py))
+
+Add the new keyword to the `KEYWORDS` dictionary and create a corresponding `TokenType`:
+
+```python
+class TokenType(Enum):
+    # ... existing types ...
+    NEW_OPERATION = "NEW_OPERATION"
+
+KEYWORDS = {
+    # ... existing keywords ...
+    'new_operation': TokenType.NEW_OPERATION,
+}
+```
+
+## 2. Define AST Node ([noeta_ast.py](mdc:noeta_ast.py))
+
+Create a new dataclass node that captures all parameters:
+
+```python
+@dataclass
+class NewOperationNode(ASTNode):
+    source_alias: str
+    parameter1: str
+    parameter2: Optional[int]
+    new_alias: str  # If operation creates new dataset
+```
+
+## 3. Add Parser Method ([noeta_parser.py](mdc:noeta_parser.py))
+
+Add parsing logic in two places:
+
+### a. Update `parse_statement()` dispatcher
+
+```python
+def parse_statement(self) -> Optional[ASTNode]:
+    # ... existing cases ...
+    elif token.type == TokenType.NEW_OPERATION:
+        return self.parse_new_operation()
+```
+
+### b. Implement parser method
+
+```python
+def parse_new_operation(self) -> NewOperationNode:
+    self.expect(TokenType.NEW_OPERATION)
+    source = self.expect(TokenType.IDENTIFIER).value
+    # Parse operation-specific syntax
+    self.expect(TokenType.PARAM1)
+    self.expect(TokenType.COLON)
+    param1 = self.expect(TokenType.IDENTIFIER).value
+    # ... more parameters ...
+    self.expect(TokenType.AS)
+    new_alias = self.expect(TokenType.IDENTIFIER).value
+    return NewOperationNode(source, param1, param2, new_alias)
+```
+
+## 4. Implement Code Generator ([noeta_codegen.py](mdc:noeta_codegen.py))
+
+Add visitor method that generates Python/Pandas code:
+
+```python
+def visit_NewOperationNode(self, node: NewOperationNode):
+    # Generate pandas code
+    code = f"{node.new_alias} = {node.source_alias}.<pandas_method>("
+    code += f"param1={node.parameter1}, param2={node.parameter2})"
+    self.code_lines.append(code)
+    
+    # Add user feedback
+    self.code_lines.append(f"print('Applied new_operation to {node.source_alias}')")
+```
+
+## 5. Add Tests ([test_noeta.py](mdc:test_noeta.py))
+
+Create test cases covering:
+
+```python
+def test_new_operation():
+    code = """
+    load "data/test.csv" as data
+    new_operation data param1: value as result
+    """
+    # Test successful execution
+    execute_noeta(code)
+    
+    # Test error handling
+    with pytest.raises(SyntaxError):
+        execute_noeta("new_operation data as result")  # Missing param
+```
+
+## 6. Update Documentation
+
+- Add examples to [examples/](mdc:examples/) directory
+- Update [DEMO_GUIDE.md](mdc:DEMO_GUIDE.md) if it's a major feature
+- Add syntax reference to [README.md](mdc:README.md)
+
+## Common Patterns
+
+### Operations that Transform Data
+Most operations follow this pattern:
+- Take a source alias
+- Accept parameters (columns, values, options)
+- Create a new alias with `as new_alias`
+
+### Operations that Display Information
+Analysis/info operations:
+- Take a source alias
+- Optionally take column specifiers
+- Generate print statements only (no assignment)
+
+### Visualization Operations
+Plotting operations:
+- Take source alias and columns
+- Generate matplotlib/seaborn code
+- Set `self.last_plot = True` to trigger `plt.show()`
+
+## Error Handling Best Practices
+
+1. **Lexer**: Validate token structure
+2. **Parser**: Raise `SyntaxError` with descriptive messages
+3. **Codegen**: Add try-except for runtime pandas errors
+4. **Messages**: Reference DSL syntax, not Python internals
+
+## Example: Adding a "deduplicate" Operation
+
+1. **Lexer**: Add `'deduplicate': TokenType.DEDUPLICATE`
+2. **AST**: 
+   ```python
+   @dataclass
+   class DeduplicateNode(ASTNode):
+       source_alias: str
+       columns: Optional[List[str]]
+       new_alias: str
+   ```
+3. **Parser**:
+   ```python
+   def parse_deduplicate(self) -> DeduplicateNode:
+       self.expect(TokenType.DEDUPLICATE)
+       source = self.expect(TokenType.IDENTIFIER).value
+       columns = None
+       if self.match(TokenType.COLUMNS):
+           self.advance()
+           self.expect(TokenType.COLON)
+           columns = self.parse_column_list()
+       self.expect(TokenType.AS)
+       new_alias = self.expect(TokenType.IDENTIFIER).value
+       return DeduplicateNode(source, columns, new_alias)
+   ```
+4. **Codegen**:
+   ```python
+   def visit_DeduplicateNode(self, node: DeduplicateNode):
+       if node.columns:
+           code = f"{node.new_alias} = {node.source_alias}.drop_duplicates(subset={node.columns}).copy()"
+       else:
+           code = f"{node.new_alias} = {node.source_alias}.drop_duplicates().copy()"
+       self.code_lines.append(code)
+       self.code_lines.append(f"print(f'Removed duplicates from {node.source_alias}')")
+   ```
+
+## Testing Checklist
+
+- [ ] Lexer correctly tokenizes new syntax
+- [ ] Parser builds correct AST node
+- [ ] Code generator produces valid Python
+- [ ] Generated code executes correctly
+- [ ] Error cases handled gracefully
+- [ ] User feedback messages are clear
+- [ ] Documentation updated

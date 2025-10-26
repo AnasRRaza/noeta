@@ -1,0 +1,53 @@
+---
+globs: *.py
+---
+
+# Python Code Conventions for Noeta
+
+## Code Style
+
+- Use type hints for all function parameters and return values
+- Use dataclasses for AST node definitions (see [noeta_ast.py](mdc:noeta_ast.py))
+- Follow PEP 8 naming conventions: `snake_case` for functions, `PascalCase` for classes
+- Keep functions focused and single-purpose
+
+## Lexer Conventions ([noeta_lexer.py](mdc:noeta_lexer.py))
+
+- All keywords must be added to the `KEYWORDS` dictionary
+- Token types are defined in the `TokenType` enum
+- The lexer should handle comments (lines starting with `#`)
+- String literals use double quotes in the DSL
+
+## Parser Conventions ([noeta_parser.py](mdc:noeta_parser.py))
+
+- Each statement type has a dedicated `parse_<statement>()` method
+- Use `expect()` for required tokens, `match()` for optional checks
+- Helper methods (`parse_column_list`, `parse_condition`, etc.) keep parsing logic DRY
+- Raise `SyntaxError` with descriptive messages for invalid syntax
+
+## AST Conventions ([noeta_ast.py](mdc:noeta_ast.py))
+
+- All nodes inherit from `ASTNode` base class
+- Use `@dataclass` decorator for clean node definitions
+- Node names follow pattern: `<Operation>Node` (e.g., `LoadNode`, `FilterNode`)
+- Include `Optional` type hints for optional fields
+
+## Code Generator Conventions ([noeta_codegen.py](mdc:noeta_codegen.py))
+
+- Visitor methods follow pattern: `visit_<NodeClassName>(self, node: NodeType)`
+- Generated code should include user feedback via `print()` statements
+- Maintain `self.symbol_table` for tracking data frame aliases
+- Track `self.last_plot` to determine if `plt.show()` should be called
+- Generated Python code should be readable and use pandas best practices
+
+## Testing
+
+- Test files should be named `test_*.py`
+- When adding new operations, add corresponding test cases
+- Verify both successful execution and error handling
+
+## Error Handling
+
+- Catch errors early in the pipeline (lexer → parser → codegen)
+- Provide error messages in terms of the DSL, not Python internals
+- Include position information when reporting syntax errors

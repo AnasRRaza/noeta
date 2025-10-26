@@ -1,0 +1,11 @@
+customer_id,name,city,country,age
+C001,John Smith,New York,USA,35
+C002,Emma Johnson,London,UK,28
+C003,Michael Brown,Toronto,Canada,42
+C004,Sophie Martin,,France,31
+C005,Luis Garcia,Madrid,Spain,39
+C006,Anna Schmidt,Berlin,Germany,26
+C007,Marco Rossi,Rome,Italy,45
+C008,Yuki Tanaka,Tokyo,Japan,33
+C009,Chen Wei,Beijing,China,37
+C010,Sarah Davis,Sydney,Australia,29
