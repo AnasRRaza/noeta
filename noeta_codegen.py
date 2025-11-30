@@ -1084,3 +1084,328 @@ class CodeGenerator:
         else:
             code += f"print({node.source_alias}.duplicated().sum())"
         self.code_lines.append(code)
+
+    # ============================================================
+    # PHASE 6: DATA ORDERING OPERATIONS - CODE GENERATORS
+    # ============================================================
+
+    def visit_SortIndexNode(self, node):
+        """Generate: df = df.sort_index(ascending=True)"""
+        code = f"{node.new_alias} = {node.source_alias}.sort_index(ascending={node.ascending})\n"
+        code += f"print(f'Sorted index {'ascending' if node.ascending else 'descending'}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_RankNode(self, node):
+        """Generate: df['col_rank'] = df['col'].rank(method='average', ascending=True, pct=False)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_rank'] = {node.source_alias}['{node.column}'].rank(method='{node.method}', ascending={node.ascending}, pct={node.pct})\n"
+        code += f"print(f'Ranked {node.column} using {node.method} method')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # ============================================================
+    # PHASE 7: AGGREGATION & GROUPING OPERATIONS - CODE GENERATORS
+    # ============================================================
+
+    def visit_FilterGroupsNode(self, node):
+        """Generate: df = df.groupby(...).filter(lambda x: condition)"""
+        # Parse the condition to create a proper lambda
+        condition = node.condition
+        # Simple parsing: replace aggregate functions with group references
+        condition_code = condition.replace("count", "len(x)").replace("sum", "x.sum()").replace("mean", "x.mean()")
+        
+        code = f"{node.new_alias} = {node.source_alias}.groupby({node.group_columns}).filter(lambda x: {condition_code})\n"
+        code += f"print(f'Filtered groups where {node.condition}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_GroupTransformNode(self, node):
+        """Generate: df['col_transformed'] = df.groupby(...)['col'].transform('mean')"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_{node.function}'] = {node.source_alias}.groupby({node.group_columns})['{node.column}'].transform('{node.function}')\n"
+        code += f"print(f'Applied {node.function} transform to {node.column} within groups')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_WindowRankNode(self, node):
+        """Generate: df['col_rank'] = df.groupby(...)['col'].rank(...)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        
+        if node.partition_by:
+            code += f"{node.new_alias}['{node.column}_rank'] = {node.source_alias}.groupby({node.partition_by})['{node.column}'].rank(method='{node.method}', ascending={node.ascending})\n"
+        else:
+            code += f"{node.new_alias}['{node.column}_rank'] = {node.source_alias}['{node.column}'].rank(method='{node.method}', ascending={node.ascending})\n"
+        
+        code += f"print(f'Computed window rank for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_WindowLagNode(self, node):
+        """Generate: df['col_lag'] = df.groupby(...)['col'].shift(n)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        
+        if node.partition_by:
+            code += f"{node.new_alias}['{node.column}_lag{node.periods}'] = {node.source_alias}.groupby({node.partition_by})['{node.column}'].shift({node.periods})\n"
+        else:
+            code += f"{node.new_alias}['{node.column}_lag{node.periods}'] = {node.source_alias}['{node.column}'].shift({node.periods})\n"
+        
+        if node.fill_value is not None:
+            code += f"{node.new_alias}['{node.column}_lag{node.periods}'] = {node.new_alias}['{node.column}_lag{node.periods}'].fillna({self._format_value(node.fill_value)})\n"
+        
+        code += f"print(f'Created lag of {node.periods} periods for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_WindowLeadNode(self, node):
+        """Generate: df['col_lead'] = df.groupby(...)['col'].shift(-n)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        
+        if node.partition_by:
+            code += f"{node.new_alias}['{node.column}_lead{node.periods}'] = {node.source_alias}.groupby({node.partition_by})['{node.column}'].shift(-{node.periods})\n"
+        else:
+            code += f"{node.new_alias}['{node.column}_lead{node.periods}'] = {node.source_alias}['{node.column}'].shift(-{node.periods})\n"
+        
+        if node.fill_value is not None:
+            code += f"{node.new_alias}['{node.column}_lead{node.periods}'] = {node.new_alias}['{node.column}_lead{node.periods}'].fillna({self._format_value(node.fill_value)})\n"
+        
+        code += f"print(f'Created lead of {node.periods} periods for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_RollingMeanNode(self, node):
+        """Generate: df['col_rolling_mean'] = df['col'].rolling(window=n).mean()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_rolling_mean'] = {node.source_alias}['{node.column}'].rolling(window={node.window}, min_periods={node.min_periods}).mean()\n"
+        code += f"print(f'Computed rolling mean with window {node.window} for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_RollingSumNode(self, node):
+        """Generate: df['col_rolling_sum'] = df['col'].rolling(window=n).sum()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_rolling_sum'] = {node.source_alias}['{node.column}'].rolling(window={node.window}, min_periods={node.min_periods}).sum()\n"
+        code += f"print(f'Computed rolling sum with window {node.window} for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_RollingStdNode(self, node):
+        """Generate: df['col_rolling_std'] = df['col'].rolling(window=n).std()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_rolling_std'] = {node.source_alias}['{node.column}'].rolling(window={node.window}, min_periods={node.min_periods}).std()\n"
+        code += f"print(f'Computed rolling std with window {node.window} for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_RollingMinNode(self, node):
+        """Generate: df['col_rolling_min'] = df['col'].rolling(window=n).min()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_rolling_min'] = {node.source_alias}['{node.column}'].rolling(window={node.window}, min_periods={node.min_periods}).min()\n"
+        code += f"print(f'Computed rolling min with window {node.window} for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_RollingMaxNode(self, node):
+        """Generate: df['col_rolling_max'] = df['col'].rolling(window=n).max()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_rolling_max'] = {node.source_alias}['{node.column}'].rolling(window={node.window}, min_periods={node.min_periods}).max()\n"
+        code += f"print(f'Computed rolling max with window {node.window} for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExpandingMeanNode(self, node):
+        """Generate: df['col_expanding_mean'] = df['col'].expanding(min_periods=n).mean()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_expanding_mean'] = {node.source_alias}['{node.column}'].expanding(min_periods={node.min_periods}).mean()\n"
+        code += f"print(f'Computed expanding mean for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExpandingSumNode(self, node):
+        """Generate: df['col_expanding_sum'] = df['col'].expanding(min_periods=n).sum()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_expanding_sum'] = {node.source_alias}['{node.column}'].expanding(min_periods={node.min_periods}).sum()\n"
+        code += f"print(f'Computed expanding sum for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExpandingMinNode(self, node):
+        """Generate: df['col_expanding_min'] = df['col'].expanding(min_periods=n).min()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_expanding_min'] = {node.source_alias}['{node.column}'].expanding(min_periods={node.min_periods}).min()\n"
+        code += f"print(f'Computed expanding min for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExpandingMaxNode(self, node):
+        """Generate: df['col_expanding_max'] = df['col'].expanding(min_periods=n).max()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_expanding_max'] = {node.source_alias}['{node.column}'].expanding(min_periods={node.min_periods}).max()\n"
+        code += f"print(f'Computed expanding max for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # ============================================================
+    # PHASE 8: DATA RESHAPING OPERATIONS - CODE GENERATORS
+    # ============================================================
+
+    def visit_PivotNode(self, node):
+        """Generate: df = df.pivot(index='idx', columns='col', values='val')"""
+        code = f"{node.new_alias} = {node.source_alias}.pivot(index='{node.index}', columns='{node.columns}', values='{node.values}')\n"
+        code += f"print(f'Pivoted data with {node.index} as index, {node.columns} as columns')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_PivotTableNode(self, node):
+        """Generate: df = pd.pivot_table(df, index='idx', columns='col', values='val', aggfunc='mean')"""
+        fill_val = f", fill_value={self._format_value(node.fill_value)}" if node.fill_value is not None else ""
+        code = f"{node.new_alias} = pd.pivot_table({node.source_alias}, index='{node.index}', columns='{node.columns}', values='{node.values}', aggfunc='{node.aggfunc}'{fill_val})\n"
+        code += f"print(f'Created pivot table with {node.aggfunc} aggregation')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_MeltNode(self, node):
+        """Generate: df = pd.melt(df, id_vars=['id'], value_vars=['v1'], var_name='var', value_name='val')"""
+        value_vars_str = f", value_vars={node.value_vars}" if node.value_vars else ""
+        code = f"{node.new_alias} = pd.melt({node.source_alias}, id_vars={node.id_vars}{value_vars_str}, var_name='{node.var_name}', value_name='{node.value_name}')\n"
+        code += f"print(f'Melted data with {len(node.id_vars)} id columns')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_StackNode(self, node):
+        """Generate: df = df.stack(level=-1)"""
+        code = f"{node.new_alias} = {node.source_alias}.stack(level={node.level})\n"
+        code += f"print(f'Stacked data at level {node.level}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_UnstackNode(self, node):
+        """Generate: df = df.unstack(level=-1, fill_value=None)"""
+        fill_val = f", fill_value={self._format_value(node.fill_value)}" if node.fill_value is not None else ""
+        code = f"{node.new_alias} = {node.source_alias}.unstack(level={node.level}{fill_val})\n"
+        code += f"print(f'Unstacked data at level {node.level}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_TransposeNode(self, node):
+        """Generate: df = df.T"""
+        code = f"{node.new_alias} = {node.source_alias}.T.copy()\n"
+        code += f"print(f'Transposed data')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_CrosstabNode(self, node):
+        """Generate: df = pd.crosstab(df['row'], df['col'], values=df['val'], aggfunc='count')"""
+        if node.values:
+            code = f"{node.new_alias} = pd.crosstab({node.source_alias}['{node.row_column}'], {node.source_alias}['{node.col_column}'], values={node.source_alias}['{node.values}'], aggfunc='{node.aggfunc}')\n"
+        else:
+            code = f"{node.new_alias} = pd.crosstab({node.source_alias}['{node.row_column}'], {node.source_alias}['{node.col_column}'])\n"
+        code += f"print(f'Created crosstab of {node.row_column} by {node.col_column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # ============================================================
+    # PHASE 9: DATA COMBINING OPERATIONS - CODE GENERATORS
+    # ============================================================
+
+    def visit_MergeNode(self, node):
+        """Generate: df = pd.merge(left, right, on='col', how='inner')"""
+        on_clause = ""
+        if node.on:
+            on_clause = f"on='{node.on}'"
+        elif node.left_on and node.right_on:
+            on_clause = f"left_on='{node.left_on}', right_on='{node.right_on}'"
+        
+        suffixes_str = f", suffixes={node.suffixes}" if node.suffixes != ("_x", "_y") else ""
+        
+        code = f"{node.new_alias} = pd.merge({node.left_alias}, {node.right_alias}, {on_clause}, how='{node.how}'{suffixes_str})\n"
+        code += f"print(f'Merged data using {node.how} join: {{len({node.new_alias})}} rows')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ConcatVerticalNode(self, node):
+        """Generate: df = pd.concat([df1, df2], axis=0, ignore_index=True)"""
+        sources_str = "[" + ", ".join(node.sources) + "]"
+        code = f"{node.new_alias} = pd.concat({sources_str}, axis=0, ignore_index={node.ignore_index})\n"
+        code += f"print(f'Concatenated {len(node.sources)} dataframes vertically: {{len({node.new_alias})}} rows')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ConcatHorizontalNode(self, node):
+        """Generate: df = pd.concat([df1, df2], axis=1)"""
+        sources_str = "[" + ", ".join(node.sources) + "]"
+        code = f"{node.new_alias} = pd.concat({sources_str}, axis=1, ignore_index={node.ignore_index})\n"
+        code += f"print(f'Concatenated {len(node.sources)} dataframes horizontally: {{len({node.new_alias}.columns)}} columns')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_UnionNode(self, node):
+        """Generate: df = pd.concat([df1, df2]).drop_duplicates()"""
+        code = f"{node.new_alias} = pd.concat([{node.left_alias}, {node.right_alias}]).drop_duplicates().reset_index(drop=True)\n"
+        code += f"print(f'Union of {node.left_alias} and {node.right_alias}: {{len({node.new_alias})}} unique rows')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_IntersectionNode(self, node):
+        """Generate: df = pd.merge(df1, df2, how='inner')"""
+        code = f"{node.new_alias} = pd.merge({node.left_alias}, {node.right_alias}, how='inner').drop_duplicates().reset_index(drop=True)\n"
+        code += f"print(f'Intersection of {node.left_alias} and {node.right_alias}: {{len({node.new_alias})}} common rows')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_DifferenceNode(self, node):
+        """Generate: df = df1[~df1.isin(df2).all(axis=1)]"""
+        code = f"_merged = {node.left_alias}.merge({node.right_alias}, how='outer', indicator=True)\n"
+        code += f"{node.new_alias} = _merged[_merged['_merge'] == 'left_only'].drop('_merge', axis=1).reset_index(drop=True)\n"
+        code += f"print(f'Difference of {node.left_alias} minus {node.right_alias}: {{len({node.new_alias})}} rows')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # ============================================================
+    # PHASE 10: ADVANCED OPERATIONS - CODE GENERATORS
+    # ============================================================
+
+    def visit_SetIndexNode(self, node):
+        """Generate: df = df.set_index('col', drop=True)"""
+        code = f"{node.new_alias} = {node.source_alias}.set_index('{node.column}', drop={node.drop})\n"
+        code += f"print(f'Set {node.column} as index')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ResetIndexNode(self, node):
+        """Generate: df = df.reset_index(drop=False)"""
+        code = f"{node.new_alias} = {node.source_alias}.reset_index(drop={node.drop})\n"
+        code += f"print(f'Reset index')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ApplyRowNode(self, node):
+        """Generate: df['result'] = df.apply(func, axis=1)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['applied_result'] = {node.source_alias}.apply({node.function_expr}, axis=1)\n"
+        code += f"print(f'Applied function to each row')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ApplyColumnNode(self, node):
+        """Generate: df['col_transformed'] = df['col'].apply(func)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_applied'] = {node.source_alias}['{node.column}'].apply({node.function_expr})\n"
+        code += f"print(f'Applied function to column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ResampleNode(self, node):
+        """Generate: df = df.resample('D')['col'].agg()"""
+        code = f"{node.new_alias} = {node.source_alias}.resample('{node.rule}')['{node.column}'].{node.aggfunc}().reset_index()\n"
+        code += f"print(f'Resampled data with rule {node.rule} using {node.aggfunc}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_AssignNode(self, node):
+        """Generate: df['col'] = value"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {self._format_value(node.value)}\n"
+        code += f"print(f'Assigned value to column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True

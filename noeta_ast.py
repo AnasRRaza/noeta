@@ -615,3 +615,284 @@ class DuplicatedNode(ASTNode):
 class CountDuplicatesNode(ASTNode):
     source_alias: str
     columns: Optional[List[str]] = None
+
+# ============================================================
+# PHASE 6: DATA ORDERING OPERATIONS
+# ============================================================
+
+@dataclass
+class SortIndexNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    ascending: bool = True
+
+@dataclass
+class RankNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    method: str = "average"  # "average", "min", "max", "first", "dense"
+    ascending: bool = True
+    pct: bool = False  # Return percentile ranks
+
+# ============================================================
+# PHASE 7: AGGREGATION & GROUPING OPERATIONS
+# ============================================================
+
+@dataclass
+class FilterGroupsNode(ASTNode):
+    source_alias: str
+    group_columns: List[str]
+    condition: str  # e.g., "count > 5" or "sum > 1000"
+    new_alias: str
+
+@dataclass
+class GroupTransformNode(ASTNode):
+    source_alias: str
+    group_columns: List[str]
+    column: str
+    function: str  # "mean", "sum", "std", etc.
+    new_alias: str
+
+@dataclass
+class WindowRankNode(ASTNode):
+    source_alias: str
+    column: str
+    partition_by: Optional[List[str]]
+    new_alias: str
+    method: str = "rank"  # "rank", "dense_rank", "row_number"
+    ascending: bool = True
+
+@dataclass
+class WindowLagNode(ASTNode):
+    source_alias: str
+    column: str
+    periods: int
+    new_alias: str
+    partition_by: Optional[List[str]] = None
+    fill_value: Any = None
+
+@dataclass
+class WindowLeadNode(ASTNode):
+    source_alias: str
+    column: str
+    periods: int
+    new_alias: str
+    partition_by: Optional[List[str]] = None
+    fill_value: Any = None
+
+@dataclass
+class RollingMeanNode(ASTNode):
+    source_alias: str
+    column: str
+    window: int
+    new_alias: str
+    min_periods: int = 1
+
+@dataclass
+class RollingSumNode(ASTNode):
+    source_alias: str
+    column: str
+    window: int
+    new_alias: str
+    min_periods: int = 1
+
+@dataclass
+class RollingStdNode(ASTNode):
+    source_alias: str
+    column: str
+    window: int
+    new_alias: str
+    min_periods: int = 1
+
+@dataclass
+class RollingMinNode(ASTNode):
+    source_alias: str
+    column: str
+    window: int
+    new_alias: str
+    min_periods: int = 1
+
+@dataclass
+class RollingMaxNode(ASTNode):
+    source_alias: str
+    column: str
+    window: int
+    new_alias: str
+    min_periods: int = 1
+
+@dataclass
+class ExpandingMeanNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    min_periods: int = 1
+
+@dataclass
+class ExpandingSumNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    min_periods: int = 1
+
+@dataclass
+class ExpandingMinNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    min_periods: int = 1
+
+@dataclass
+class ExpandingMaxNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    min_periods: int = 1
+
+# ============================================================
+# PHASE 8: DATA RESHAPING OPERATIONS
+# ============================================================
+
+@dataclass
+class PivotNode(ASTNode):
+    source_alias: str
+    index: str  # Column to use as index
+    columns: str  # Column to use as new column headers
+    values: str  # Column for values
+    new_alias: str
+
+@dataclass
+class PivotTableNode(ASTNode):
+    source_alias: str
+    index: str
+    columns: str
+    values: str
+    new_alias: str
+    aggfunc: str = "mean"  # Aggregation function
+    fill_value: Any = None
+
+@dataclass
+class MeltNode(ASTNode):
+    source_alias: str
+    id_vars: List[str]  # Columns to keep as identifiers
+    value_vars: Optional[List[str]]  # Columns to unpivot (None = all others)
+    new_alias: str
+    var_name: str = "variable"
+    value_name: str = "value"
+
+@dataclass
+class StackNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    level: int = -1  # Level to stack
+
+@dataclass
+class UnstackNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    level: int = -1  # Level to unstack
+    fill_value: Any = None
+
+@dataclass
+class TransposeNode(ASTNode):
+    source_alias: str
+    new_alias: str
+
+@dataclass
+class CrosstabNode(ASTNode):
+    source_alias: str
+    row_column: str  # Column for rows
+    col_column: str  # Column for columns
+    new_alias: str
+    aggfunc: str = "count"  # Aggregation function
+    values: Optional[str] = None  # Values column for aggregation
+
+# ============================================================
+# PHASE 9: DATA COMBINING OPERATIONS
+# ============================================================
+
+@dataclass
+class MergeNode(ASTNode):
+    left_alias: str
+    right_alias: str
+    new_alias: str
+    on: Optional[str] = None  # Common column
+    left_on: Optional[str] = None
+    right_on: Optional[str] = None
+    how: str = "inner"  # "inner", "left", "right", "outer", "cross"
+    suffixes: tuple = ("_x", "_y")
+
+@dataclass
+class ConcatVerticalNode(ASTNode):
+    sources: List[str]  # List of source aliases
+    new_alias: str
+    ignore_index: bool = True
+
+@dataclass
+class ConcatHorizontalNode(ASTNode):
+    sources: List[str]
+    new_alias: str
+    ignore_index: bool = False
+
+@dataclass
+class UnionNode(ASTNode):
+    left_alias: str
+    right_alias: str
+    new_alias: str
+
+@dataclass
+class IntersectionNode(ASTNode):
+    left_alias: str
+    right_alias: str
+    new_alias: str
+
+@dataclass
+class DifferenceNode(ASTNode):
+    left_alias: str
+    right_alias: str
+    new_alias: str
+
+# ============================================================
+# PHASE 10: ADVANCED OPERATIONS
+# ============================================================
+
+@dataclass
+class SetIndexNode(ASTNode):
+    source_alias: str
+    column: str  # Column(s) to set as index
+    new_alias: str
+    drop: bool = True  # Whether to drop the column from data
+
+@dataclass
+class ResetIndexNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    drop: bool = False  # Whether to discard the index
+
+@dataclass
+class ApplyRowNode(ASTNode):
+    source_alias: str
+    function_expr: str  # Expression to apply to each row
+    new_alias: str
+
+@dataclass
+class ApplyColumnNode(ASTNode):
+    source_alias: str
+    column: str
+    function_expr: str  # Expression to apply to column
+    new_alias: str
+
+@dataclass
+class ResampleNode(ASTNode):
+    source_alias: str
+    rule: str  # Resampling rule: "D", "W", "M", "Y", etc.
+    column: str  # Column to aggregate
+    aggfunc: str  # Aggregation function
+    new_alias: str
+
+@dataclass
+class AssignNode(ASTNode):
+    source_alias: str
+    column: str
+    value: Any  # Constant value or expression
+    new_alias: str

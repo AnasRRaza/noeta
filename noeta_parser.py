@@ -188,6 +188,86 @@ class Parser:
         elif token.type == TokenType.COUNT_DUPLICATES:
             return self.parse_count_duplicates()
 
+        # Phase 6: Data Ordering operations
+        elif token.type == TokenType.SORT_INDEX:
+            return self.parse_sort_index()
+        elif token.type == TokenType.RANK:
+            return self.parse_rank()
+
+        # Phase 7: Aggregation & Grouping operations
+        elif token.type == TokenType.FILTER_GROUPS:
+            return self.parse_filter_groups()
+        elif token.type == TokenType.GROUP_TRANSFORM:
+            return self.parse_group_transform()
+        elif token.type == TokenType.WINDOW_RANK:
+            return self.parse_window_rank()
+        elif token.type == TokenType.WINDOW_LAG:
+            return self.parse_window_lag()
+        elif token.type == TokenType.WINDOW_LEAD:
+            return self.parse_window_lead()
+        elif token.type == TokenType.ROLLING_MEAN:
+            return self.parse_rolling_mean()
+        elif token.type == TokenType.ROLLING_SUM:
+            return self.parse_rolling_sum()
+        elif token.type == TokenType.ROLLING_STD:
+            return self.parse_rolling_std()
+        elif token.type == TokenType.ROLLING_MIN:
+            return self.parse_rolling_min()
+        elif token.type == TokenType.ROLLING_MAX:
+            return self.parse_rolling_max()
+        elif token.type == TokenType.EXPANDING_MEAN:
+            return self.parse_expanding_mean()
+        elif token.type == TokenType.EXPANDING_SUM:
+            return self.parse_expanding_sum()
+        elif token.type == TokenType.EXPANDING_MIN:
+            return self.parse_expanding_min()
+        elif token.type == TokenType.EXPANDING_MAX:
+            return self.parse_expanding_max()
+
+        # Phase 8: Data Reshaping operations
+        elif token.type == TokenType.PIVOT:
+            return self.parse_pivot()
+        elif token.type == TokenType.PIVOT_TABLE:
+            return self.parse_pivot_table()
+        elif token.type == TokenType.MELT:
+            return self.parse_melt()
+        elif token.type == TokenType.STACK:
+            return self.parse_stack()
+        elif token.type == TokenType.UNSTACK:
+            return self.parse_unstack()
+        elif token.type == TokenType.TRANSPOSE:
+            return self.parse_transpose()
+        elif token.type == TokenType.CROSSTAB:
+            return self.parse_crosstab()
+
+        # Phase 9: Data Combining operations
+        elif token.type == TokenType.MERGE:
+            return self.parse_merge()
+        elif token.type == TokenType.CONCAT_VERTICAL:
+            return self.parse_concat_vertical()
+        elif token.type == TokenType.CONCAT_HORIZONTAL:
+            return self.parse_concat_horizontal()
+        elif token.type == TokenType.UNION:
+            return self.parse_union()
+        elif token.type == TokenType.INTERSECTION:
+            return self.parse_intersection()
+        elif token.type == TokenType.DIFFERENCE:
+            return self.parse_difference()
+
+        # Phase 10: Advanced Operations
+        elif token.type == TokenType.SET_INDEX:
+            return self.parse_set_index()
+        elif token.type == TokenType.RESET_INDEX:
+            return self.parse_reset_index()
+        elif token.type == TokenType.APPLY_ROW:
+            return self.parse_apply_row()
+        elif token.type == TokenType.APPLY_COLUMN:
+            return self.parse_apply_column()
+        elif token.type == TokenType.RESAMPLE:
+            return self.parse_resample()
+        elif token.type == TokenType.ASSIGN_CONST:
+            return self.parse_assign()
+
         elif token.type == TokenType.DROPNA:
             return self.parse_dropna()
         elif token.type == TokenType.FILLNA:
@@ -1960,3 +2040,723 @@ class Parser:
             columns = self.parse_list_value()
 
         return CountDuplicatesNode(source, columns)
+
+    # ============================================================
+    # PHASE 6: DATA ORDERING OPERATIONS - PARSERS
+    # ============================================================
+
+    def parse_sort_index(self) -> 'SortIndexNode':
+        """Parse: sort_index data ascending=true as sorted"""
+        from noeta_ast import SortIndexNode
+        self.advance()  # consume SORT_INDEX
+        source = self.expect(TokenType.IDENTIFIER).value
+
+        # Optional ascending parameter
+        ascending = True
+        if self.match(TokenType.ASCENDING):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            asc_val = self.parse_value()
+            ascending = asc_val if isinstance(asc_val, bool) else str(asc_val).lower() == 'true'
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return SortIndexNode(source, new_alias, ascending)
+
+    def parse_rank(self) -> 'RankNode':
+        """Parse: rank data column score method="dense" ascending=true pct=false as ranked"""
+        from noeta_ast import RankNode
+        self.advance()  # consume RANK
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Optional parameters
+        method = "average"
+        ascending = True
+        pct = False
+
+        if self.match(TokenType.METHOD):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            method = self.expect(TokenType.STRING_LITERAL).value
+
+        if self.match(TokenType.ASCENDING):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            asc_val = self.parse_value()
+            ascending = asc_val if isinstance(asc_val, bool) else str(asc_val).lower() == 'true'
+
+        if self.match(TokenType.PCT):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            pct_val = self.parse_value()
+            pct = pct_val if isinstance(pct_val, bool) else str(pct_val).lower() == 'true'
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RankNode(source, column, new_alias, method, ascending, pct)
+
+    # ============================================================
+    # PHASE 7: AGGREGATION & GROUPING OPERATIONS - PARSERS
+    # ============================================================
+
+    def parse_filter_groups(self) -> 'FilterGroupsNode':
+        """Parse: filter_groups data by ["category"] condition="count > 5" as filtered"""
+        from noeta_ast import FilterGroupsNode
+        self.advance()  # consume FILTER_GROUPS
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.BY)
+        group_columns = self.parse_list_value()
+        self.expect(TokenType.CONDITION)
+        self.expect(TokenType.ASSIGN)
+        condition = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterGroupsNode(source, group_columns, condition, new_alias)
+
+    def parse_group_transform(self) -> 'GroupTransformNode':
+        """Parse: group_transform data by ["category"] column value function="mean" as transformed"""
+        from noeta_ast import GroupTransformNode
+        self.advance()  # consume GROUP_TRANSFORM
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.BY)
+        group_columns = self.parse_list_value()
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.FUNCTION)
+        self.expect(TokenType.ASSIGN)
+        function = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return GroupTransformNode(source, group_columns, column, function, new_alias)
+
+    def parse_window_rank(self) -> 'WindowRankNode':
+        """Parse: window_rank data column score by ["category"] method="rank" as ranked"""
+        from noeta_ast import WindowRankNode
+        self.advance()  # consume WINDOW_RANK
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        partition_by = None
+        if self.match(TokenType.BY):
+            self.advance()
+            partition_by = self.parse_list_value()
+
+        method = "rank"
+        if self.match(TokenType.METHOD):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            method = self.expect(TokenType.STRING_LITERAL).value
+
+        ascending = True
+        if self.match(TokenType.ASCENDING):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            asc_val = self.parse_value()
+            ascending = asc_val if isinstance(asc_val, bool) else str(asc_val).lower() == 'true'
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return WindowRankNode(source, column, partition_by, new_alias, method, ascending)
+
+    def parse_window_lag(self) -> 'WindowLagNode':
+        """Parse: window_lag data column value periods=1 by ["category"] as lagged"""
+        from noeta_ast import WindowLagNode
+        self.advance()  # consume WINDOW_LAG
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.PERIODS)
+        self.expect(TokenType.ASSIGN)
+        periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        partition_by = None
+        if self.match(TokenType.BY):
+            self.advance()
+            partition_by = self.parse_list_value()
+
+        fill_value = None
+        if self.match(TokenType.FILL_VALUE):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            fill_value = self.parse_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return WindowLagNode(source, column, periods, new_alias, partition_by, fill_value)
+
+    def parse_window_lead(self) -> 'WindowLeadNode':
+        """Parse: window_lead data column value periods=1 by ["category"] as lead"""
+        from noeta_ast import WindowLeadNode
+        self.advance()  # consume WINDOW_LEAD
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.PERIODS)
+        self.expect(TokenType.ASSIGN)
+        periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        partition_by = None
+        if self.match(TokenType.BY):
+            self.advance()
+            partition_by = self.parse_list_value()
+
+        fill_value = None
+        if self.match(TokenType.FILL_VALUE):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            fill_value = self.parse_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return WindowLeadNode(source, column, periods, new_alias, partition_by, fill_value)
+
+    def parse_rolling_mean(self) -> 'RollingMeanNode':
+        """Parse: rolling_mean data column value window=3 as rolling"""
+        from noeta_ast import RollingMeanNode
+        self.advance()  # consume ROLLING_MEAN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WINDOW)
+        self.expect(TokenType.ASSIGN)
+        window = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RollingMeanNode(source, column, window, new_alias, min_periods)
+
+    def parse_rolling_sum(self) -> 'RollingSumNode':
+        """Parse: rolling_sum data column value window=3 as rolling"""
+        from noeta_ast import RollingSumNode
+        self.advance()  # consume ROLLING_SUM
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WINDOW)
+        self.expect(TokenType.ASSIGN)
+        window = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RollingSumNode(source, column, window, new_alias, min_periods)
+
+    def parse_rolling_std(self) -> 'RollingStdNode':
+        """Parse: rolling_std data column value window=3 as rolling"""
+        from noeta_ast import RollingStdNode
+        self.advance()  # consume ROLLING_STD
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WINDOW)
+        self.expect(TokenType.ASSIGN)
+        window = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RollingStdNode(source, column, window, new_alias, min_periods)
+
+    def parse_rolling_min(self) -> 'RollingMinNode':
+        """Parse: rolling_min data column value window=3 as rolling"""
+        from noeta_ast import RollingMinNode
+        self.advance()  # consume ROLLING_MIN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WINDOW)
+        self.expect(TokenType.ASSIGN)
+        window = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RollingMinNode(source, column, window, new_alias, min_periods)
+
+    def parse_rolling_max(self) -> 'RollingMaxNode':
+        """Parse: rolling_max data column value window=3 as rolling"""
+        from noeta_ast import RollingMaxNode
+        self.advance()  # consume ROLLING_MAX
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WINDOW)
+        self.expect(TokenType.ASSIGN)
+        window = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RollingMaxNode(source, column, window, new_alias, min_periods)
+
+    def parse_expanding_mean(self) -> 'ExpandingMeanNode':
+        """Parse: expanding_mean data column value as expanding"""
+        from noeta_ast import ExpandingMeanNode
+        self.advance()  # consume EXPANDING_MEAN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExpandingMeanNode(source, column, new_alias, min_periods)
+
+    def parse_expanding_sum(self) -> 'ExpandingSumNode':
+        """Parse: expanding_sum data column value as expanding"""
+        from noeta_ast import ExpandingSumNode
+        self.advance()  # consume EXPANDING_SUM
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExpandingSumNode(source, column, new_alias, min_periods)
+
+    def parse_expanding_min(self) -> 'ExpandingMinNode':
+        """Parse: expanding_min data column value as expanding"""
+        from noeta_ast import ExpandingMinNode
+        self.advance()  # consume EXPANDING_MIN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExpandingMinNode(source, column, new_alias, min_periods)
+
+    def parse_expanding_max(self) -> 'ExpandingMaxNode':
+        """Parse: expanding_max data column value as expanding"""
+        from noeta_ast import ExpandingMaxNode
+        self.advance()  # consume EXPANDING_MAX
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        min_periods = 1
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_periods = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExpandingMaxNode(source, column, new_alias, min_periods)
+
+    # ============================================================
+    # PHASE 8: DATA RESHAPING OPERATIONS - PARSERS
+    # ============================================================
+
+    def parse_pivot(self) -> 'PivotNode':
+        """Parse: pivot data index="date" columns="category" values="amount" as pivoted"""
+        from noeta_ast import PivotNode
+        self.advance()  # consume PIVOT
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.INDEX)
+        self.expect(TokenType.ASSIGN)
+        index = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.COLUMNS)
+        self.expect(TokenType.ASSIGN)
+        columns = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.VALUES)
+        self.expect(TokenType.ASSIGN)
+        values = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return PivotNode(source, index, columns, values, new_alias)
+
+    def parse_pivot_table(self) -> 'PivotTableNode':
+        """Parse: pivot_table data index="date" columns="category" values="amount" aggfunc="sum" as pivoted"""
+        from noeta_ast import PivotTableNode
+        self.advance()  # consume PIVOT_TABLE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.INDEX)
+        self.expect(TokenType.ASSIGN)
+        index = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.COLUMNS)
+        self.expect(TokenType.ASSIGN)
+        columns = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.VALUES)
+        self.expect(TokenType.ASSIGN)
+        values = self.expect(TokenType.STRING_LITERAL).value
+
+        aggfunc = "mean"
+        if self.match(TokenType.AGGFUNC):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            aggfunc = self.expect(TokenType.STRING_LITERAL).value
+
+        fill_value = None
+        if self.match(TokenType.FILL_VALUE):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            fill_value = self.parse_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return PivotTableNode(source, index, columns, values, new_alias, aggfunc, fill_value)
+
+    def parse_melt(self) -> 'MeltNode':
+        """Parse: melt data id_vars=["id", "name"] value_vars=["jan", "feb"] var_name="month" value_name="sales" as melted"""
+        from noeta_ast import MeltNode
+        self.advance()  # consume MELT
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.ID_VARS)
+        self.expect(TokenType.ASSIGN)
+        id_vars = self.parse_list_value()
+
+        value_vars = None
+        if self.match(TokenType.VALUE_VARS):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            value_vars = self.parse_list_value()
+
+        var_name = "variable"
+        if self.match(TokenType.VAR_NAME):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            var_name = self.expect(TokenType.STRING_LITERAL).value
+
+        value_name = "value"
+        if self.match(TokenType.VALUE_NAME):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            value_name = self.expect(TokenType.STRING_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return MeltNode(source, id_vars, value_vars, new_alias, var_name, value_name)
+
+    def parse_stack(self) -> 'StackNode':
+        """Parse: stack data level=-1 as stacked"""
+        from noeta_ast import StackNode
+        self.advance()  # consume STACK
+        source = self.expect(TokenType.IDENTIFIER).value
+
+        level = -1
+        if self.match(TokenType.LEVEL):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            level = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return StackNode(source, new_alias, level)
+
+    def parse_unstack(self) -> 'UnstackNode':
+        """Parse: unstack data level=-1 fill_value=0 as unstacked"""
+        from noeta_ast import UnstackNode
+        self.advance()  # consume UNSTACK
+        source = self.expect(TokenType.IDENTIFIER).value
+
+        level = -1
+        if self.match(TokenType.LEVEL):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            level = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        fill_value = None
+        if self.match(TokenType.FILL_VALUE):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            fill_value = self.parse_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return UnstackNode(source, new_alias, level, fill_value)
+
+    def parse_transpose(self) -> 'TransposeNode':
+        """Parse: transpose data as transposed"""
+        from noeta_ast import TransposeNode
+        self.advance()  # consume TRANSPOSE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return TransposeNode(source, new_alias)
+
+    def parse_crosstab(self) -> 'CrosstabNode':
+        """Parse: crosstab data rows="gender" columns="status" values="count" aggfunc="count" as xtab"""
+        from noeta_ast import CrosstabNode
+        self.advance()  # consume CROSSTAB
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.ROWS)
+        self.expect(TokenType.ASSIGN)
+        row_column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.COLUMNS)
+        self.expect(TokenType.ASSIGN)
+        col_column = self.expect(TokenType.STRING_LITERAL).value
+
+        values = None
+        if self.match(TokenType.VALUES):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            values = self.expect(TokenType.STRING_LITERAL).value
+
+        aggfunc = "count"
+        if self.match(TokenType.AGGFUNC):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            aggfunc = self.expect(TokenType.STRING_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return CrosstabNode(source, row_column, col_column, new_alias, aggfunc, values)
+
+    # ============================================================
+    # PHASE 9: DATA COMBINING OPERATIONS - PARSERS
+    # ============================================================
+
+    def parse_merge(self) -> 'MergeNode':
+        """Parse: merge left with right on="id" how="inner" as merged"""
+        from noeta_ast import MergeNode
+        self.advance()  # consume MERGE
+        left_alias = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        right_alias = self.expect(TokenType.IDENTIFIER).value
+
+        on = None
+        left_on = None
+        right_on = None
+        how = "inner"
+        suffixes = ("_x", "_y")
+
+        if self.match(TokenType.ON):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            on = self.expect(TokenType.STRING_LITERAL).value
+
+        if self.match(TokenType.LEFT_ON):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            left_on = self.expect(TokenType.STRING_LITERAL).value
+
+        if self.match(TokenType.RIGHT_ON):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            right_on = self.expect(TokenType.STRING_LITERAL).value
+
+        if self.match(TokenType.HOW):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            how = self.expect(TokenType.STRING_LITERAL).value
+
+        if self.match(TokenType.SUFFIXES):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            suffixes_list = self.parse_list_value()
+            suffixes = tuple(suffixes_list) if len(suffixes_list) >= 2 else ("_x", "_y")
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return MergeNode(left_alias, right_alias, new_alias, on, left_on, right_on, how, suffixes)
+
+    def parse_concat_vertical(self) -> 'ConcatVerticalNode':
+        """Parse: concat_vertical [df1, df2, df3] ignore_index=true as concatenated"""
+        from noeta_ast import ConcatVerticalNode
+        self.advance()  # consume CONCAT_VERTICAL
+        sources = self.parse_list_value()
+
+        ignore_index = True
+        if self.match(TokenType.IGNORE_INDEX):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            idx_val = self.parse_value()
+            ignore_index = idx_val if isinstance(idx_val, bool) else str(idx_val).lower() == 'true'
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ConcatVerticalNode(sources, new_alias, ignore_index)
+
+    def parse_concat_horizontal(self) -> 'ConcatHorizontalNode':
+        """Parse: concat_horizontal [df1, df2] as concatenated"""
+        from noeta_ast import ConcatHorizontalNode
+        self.advance()  # consume CONCAT_HORIZONTAL
+        sources = self.parse_list_value()
+
+        ignore_index = False
+        if self.match(TokenType.IGNORE_INDEX):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            idx_val = self.parse_value()
+            ignore_index = idx_val if isinstance(idx_val, bool) else str(idx_val).lower() == 'true'
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ConcatHorizontalNode(sources, new_alias, ignore_index)
+
+    def parse_union(self) -> 'UnionNode':
+        """Parse: union df1 with df2 as combined"""
+        from noeta_ast import UnionNode
+        self.advance()  # consume UNION
+        left_alias = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        right_alias = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return UnionNode(left_alias, right_alias, new_alias)
+
+    def parse_intersection(self) -> 'IntersectionNode':
+        """Parse: intersection df1 with df2 as common"""
+        from noeta_ast import IntersectionNode
+        self.advance()  # consume INTERSECTION
+        left_alias = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        right_alias = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return IntersectionNode(left_alias, right_alias, new_alias)
+
+    def parse_difference(self) -> 'DifferenceNode':
+        """Parse: difference df1 with df2 as diff"""
+        from noeta_ast import DifferenceNode
+        self.advance()  # consume DIFFERENCE
+        left_alias = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        right_alias = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return DifferenceNode(left_alias, right_alias, new_alias)
+
+    # ============================================================
+    # PHASE 10: ADVANCED OPERATIONS - PARSERS
+    # ============================================================
+
+    def parse_set_index(self) -> 'SetIndexNode':
+        """Parse: set_index data column id drop=true as indexed"""
+        from noeta_ast import SetIndexNode
+        self.advance()  # consume SET_INDEX
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        drop = True
+        if self.match(TokenType.DROP):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            drop_val = self.parse_value()
+            drop = drop_val if isinstance(drop_val, bool) else str(drop_val).lower() == 'true'
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return SetIndexNode(source, column, new_alias, drop)
+
+    def parse_reset_index(self) -> 'ResetIndexNode':
+        """Parse: reset_index data drop=false as reset"""
+        from noeta_ast import ResetIndexNode
+        self.advance()  # consume RESET_INDEX
+        source = self.expect(TokenType.IDENTIFIER).value
+
+        drop = False
+        if self.match(TokenType.DROP):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            drop_val = self.parse_value()
+            drop = drop_val if isinstance(drop_val, bool) else str(drop_val).lower() == 'true'
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ResetIndexNode(source, new_alias, drop)
+
+    def parse_apply_row(self) -> 'ApplyRowNode':
+        """Parse: apply_row data function="lambda x: x.sum()" as applied"""
+        from noeta_ast import ApplyRowNode
+        self.advance()  # consume APPLY_ROW
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.FUNCTION)
+        self.expect(TokenType.ASSIGN)
+        function_expr = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ApplyRowNode(source, function_expr, new_alias)
+
+    def parse_apply_column(self) -> 'ApplyColumnNode':
+        """Parse: apply_column data column value function="lambda x: x * 2" as applied"""
+        from noeta_ast import ApplyColumnNode
+        self.advance()  # consume APPLY_COLUMN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.FUNCTION)
+        self.expect(TokenType.ASSIGN)
+        function_expr = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ApplyColumnNode(source, column, function_expr, new_alias)
+
+    def parse_resample(self) -> 'ResampleNode':
+        """Parse: resample data rule="D" column value aggfunc="sum" as resampled"""
+        from noeta_ast import ResampleNode
+        self.advance()  # consume RESAMPLE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.RULE)
+        self.expect(TokenType.ASSIGN)
+        rule = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AGGFUNC)
+        self.expect(TokenType.ASSIGN)
+        aggfunc = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ResampleNode(source, rule, column, aggfunc, new_alias)
+
+    def parse_assign(self) -> 'AssignNode':
+        """Parse: assign data column status value="active" as assigned"""
+        from noeta_ast import AssignNode
+        self.advance()  # consume ASSIGN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.VALUE)
+        self.expect(TokenType.ASSIGN)
+        value = self.parse_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return AssignNode(source, column, value, new_alias)

@@ -104,6 +104,51 @@ class TokenType(Enum):
     COUNT_DUPLICATES = auto()
     DROP_DUPLICATES = auto()
 
+    # Phase 6: Data Ordering operations
+    SORT_INDEX = auto()
+    RANK = auto()
+
+    # Phase 7: Aggregation & Grouping operations
+    FILTER_GROUPS = auto()
+    GROUP_TRANSFORM = auto()
+    WINDOW_RANK = auto()
+    WINDOW_LAG = auto()
+    WINDOW_LEAD = auto()
+    ROLLING_MEAN = auto()
+    ROLLING_SUM = auto()
+    ROLLING_STD = auto()
+    ROLLING_MIN = auto()
+    ROLLING_MAX = auto()
+    EXPANDING_MEAN = auto()
+    EXPANDING_SUM = auto()
+    EXPANDING_MIN = auto()
+    EXPANDING_MAX = auto()
+
+    # Phase 8: Data Reshaping operations
+    PIVOT = auto()
+    PIVOT_TABLE = auto()
+    MELT = auto()
+    STACK = auto()
+    UNSTACK = auto()
+    TRANSPOSE = auto()
+    CROSSTAB = auto()
+
+    # Phase 9: Data Combining operations
+    MERGE = auto()
+    CONCAT_VERTICAL = auto()
+    CONCAT_HORIZONTAL = auto()
+    UNION = auto()
+    INTERSECTION = auto()
+    DIFFERENCE = auto()
+
+    # Phase 10: Advanced Operations
+    SET_INDEX = auto()
+    RESET_INDEX = auto()
+    APPLY_ROW = auto()
+    APPLY_COLUMN = auto()
+    RESAMPLE = auto()
+    ASSIGN_CONST = auto()  # assign constant value operation
+
     # File format keywords
     CSV = auto()
     JSON = auto()
@@ -172,6 +217,28 @@ class TokenType(Enum):
     ERRORS = auto()
     STRATEGY = auto()
     AXIS = auto()
+    
+    # Additional parameter keywords
+    ASCENDING = auto()
+    PERIODS = auto()
+    ID_VARS = auto()
+    VALUE_VARS = auto()
+    VAR_NAME = auto()
+    VALUE_NAME = auto()
+    LEFT = auto()
+    RIGHT = auto()
+    LEFT_ON = auto()
+    RIGHT_ON = auto()
+    SUFFIXES = auto()
+    HOW = auto()
+    AGGFUNC = auto()
+    FILL_VALUE = auto()
+    LEVEL = auto()
+    RULE = auto()
+    CONDITION = auto()
+    PCT = auto()
+    DROP = auto()
+    IGNORE_INDEX = auto()
 
     # LOAD/SAVE parameters
     DELIMITER = auto()
@@ -361,6 +428,51 @@ class Lexer:
             'count_duplicates': TokenType.COUNT_DUPLICATES,
             'drop_duplicates': TokenType.DROP_DUPLICATES,
 
+            # Phase 6: Data Ordering operations
+            'sort_index': TokenType.SORT_INDEX,
+            'rank': TokenType.RANK,
+
+            # Phase 7: Aggregation & Grouping operations
+            'filter_groups': TokenType.FILTER_GROUPS,
+            'group_transform': TokenType.GROUP_TRANSFORM,
+            'window_rank': TokenType.WINDOW_RANK,
+            'window_lag': TokenType.WINDOW_LAG,
+            'window_lead': TokenType.WINDOW_LEAD,
+            'rolling_mean': TokenType.ROLLING_MEAN,
+            'rolling_sum': TokenType.ROLLING_SUM,
+            'rolling_std': TokenType.ROLLING_STD,
+            'rolling_min': TokenType.ROLLING_MIN,
+            'rolling_max': TokenType.ROLLING_MAX,
+            'expanding_mean': TokenType.EXPANDING_MEAN,
+            'expanding_sum': TokenType.EXPANDING_SUM,
+            'expanding_min': TokenType.EXPANDING_MIN,
+            'expanding_max': TokenType.EXPANDING_MAX,
+
+            # Phase 8: Data Reshaping operations
+            'pivot': TokenType.PIVOT,
+            'pivot_table': TokenType.PIVOT_TABLE,
+            'melt': TokenType.MELT,
+            'stack': TokenType.STACK,
+            'unstack': TokenType.UNSTACK,
+            'transpose': TokenType.TRANSPOSE,
+            'crosstab': TokenType.CROSSTAB,
+
+            # Phase 9: Data Combining operations
+            'merge': TokenType.MERGE,
+            'concat_vertical': TokenType.CONCAT_VERTICAL,
+            'concat_horizontal': TokenType.CONCAT_HORIZONTAL,
+            'union': TokenType.UNION,
+            'intersection': TokenType.INTERSECTION,
+            'difference': TokenType.DIFFERENCE,
+
+            # Phase 10: Advanced Operations
+            'set_index': TokenType.SET_INDEX,
+            'reset_index': TokenType.RESET_INDEX,
+            'apply_row': TokenType.APPLY_ROW,
+            'apply_column': TokenType.APPLY_COLUMN,
+            'resample': TokenType.RESAMPLE,
+            'assign': TokenType.ASSIGN_CONST,
+
             # File formats
             'csv': TokenType.CSV,
             'json': TokenType.JSON,
@@ -429,6 +541,28 @@ class Lexer:
             'errors': TokenType.ERRORS,
             'strategy': TokenType.STRATEGY,
             'axis': TokenType.AXIS,
+
+            # Additional parameter keywords
+            'ascending': TokenType.ASCENDING,
+            'periods': TokenType.PERIODS,
+            'id_vars': TokenType.ID_VARS,
+            'value_vars': TokenType.VALUE_VARS,
+            'var_name': TokenType.VAR_NAME,
+            'value_name': TokenType.VALUE_NAME,
+            'left': TokenType.LEFT,
+            'right': TokenType.RIGHT,
+            'left_on': TokenType.LEFT_ON,
+            'right_on': TokenType.RIGHT_ON,
+            'suffixes': TokenType.SUFFIXES,
+            'how': TokenType.HOW,
+            'aggfunc': TokenType.AGGFUNC,
+            'fill_value': TokenType.FILL_VALUE,
+            'level': TokenType.LEVEL,
+            'rule': TokenType.RULE,
+            'condition': TokenType.CONDITION,
+            'pct': TokenType.PCT,
+            'drop': TokenType.DROP,
+            'ignore_index': TokenType.IGNORE_INDEX,
 
             # LOAD/SAVE parameters
             'delimiter': TokenType.DELIMITER,
