@@ -1,5 +1,5 @@
 # Python
-_pycache_/
+__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -43,4 +43,3 @@ Thumbs.db
 # Project specific
 output/
 *.png
-*.csv
