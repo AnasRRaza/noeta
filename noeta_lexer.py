@@ -100,6 +100,8 @@ class TokenType(Enum):
     FILL_MEDIAN = auto()
     FILL_MODE = auto()
     INTERPOLATE = auto()
+    DUPLICATED = auto()
+    COUNT_DUPLICATES = auto()
     DROP_DUPLICATES = auto()
 
     # File format keywords
@@ -157,6 +159,10 @@ class TokenType(Enum):
     OR = auto()
     IN = auto()
     DECIMALS = auto()
+    EXPONENT = auto()
+    BASE = auto()
+    SEPARATOR = auto()
+    UNIT = auto()
     OLD = auto()
     NEW = auto()
     DELIMITER_STR = auto()
@@ -351,6 +357,8 @@ class Lexer:
             'fill_median': TokenType.FILL_MEDIAN,
             'fill_mode': TokenType.FILL_MODE,
             'interpolate': TokenType.INTERPOLATE,
+            'duplicated': TokenType.DUPLICATED,
+            'count_duplicates': TokenType.COUNT_DUPLICATES,
             'drop_duplicates': TokenType.DROP_DUPLICATES,
 
             # File formats
@@ -408,6 +416,10 @@ class Lexer:
             'or': TokenType.OR,
             'in': TokenType.IN,
             'decimals': TokenType.DECIMALS,
+            'exponent': TokenType.EXPONENT,
+            'base': TokenType.BASE,
+            'separator': TokenType.SEPARATOR,
+            'unit': TokenType.UNIT,
             'old': TokenType.OLD,
             'new': TokenType.NEW,
             'delimiter_str': TokenType.DELIMITER_STR,

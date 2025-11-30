@@ -1,0 +1,34 @@
+# Test Phase 5: Cleaning Operations
+load csv "data/sales_data.csv" as sales
+
+# Test ISNULL
+isnull sales column price as null_check
+
+# Test NOTNULL
+notnull sales column price as not_null_check
+
+# Test COUNT_NA
+count_na sales
+
+# Test FILL_FORWARD
+fill_forward sales as forward_filled
+
+# Test FILL_BACKWARD
+fill_backward sales as backward_filled
+
+# Test FILL_MEAN
+fill_mean sales column price as mean_filled
+
+# Test FILL_MEDIAN
+fill_median sales column price as median_filled
+
+# Test INTERPOLATE
+interpolate sales method="linear" as interpolated
+
+# Test DUPLICATED
+duplicated sales keep="first" as dup_check
+
+# Test COUNT_DUPLICATES
+count_duplicates sales
+
+describe mean_filled

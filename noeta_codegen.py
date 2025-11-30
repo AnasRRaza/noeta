@@ -727,5 +727,360 @@ class CodeGenerator:
             code += f"plt.gcf().set_size_inches({node.width}/100, {node.height}/100)\n"
         code += f"plt.savefig('{node.file_name}', dpi=100, bbox_inches='tight')\n"
         code += f"print(f'Exported plot to {node.file_name}')"
-        
+
+        self.code_lines.append(code)
+
+    # ============================================================
+    # PHASE 4: TRANSFORMATION OPERATIONS - CODE GENERATORS
+    # ============================================================
+
+    # Phase 4A: Math Operations
+    def visit_RoundNode(self, node):
+        """Generate: df['col_round'] = df['col'].round(decimals)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].round({node.decimals})\n"
+        code += f"print(f'Rounded {node.column} to {node.decimals} decimals')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_AbsNode(self, node):
+        """Generate: df['col_abs'] = df['col'].abs()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].abs()\n"
+        code += f"print(f'Computed absolute value for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_SqrtNode(self, node):
+        """Generate: df['col_sqrt'] = np.sqrt(df['col'])"""
+        self.imports.add("import numpy as np")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = np.sqrt({node.source_alias}['{node.column}'])\n"
+        code += f"print(f'Computed square root for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_PowerNode(self, node):
+        """Generate: df['col_pow'] = np.power(df['col'], exp)"""
+        self.imports.add("import numpy as np")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = np.power({node.source_alias}['{node.column}'], {node.exponent})\n"
+        code += f"print(f'Raised {node.column} to power {node.exponent}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_LogNode(self, node):
+        """Generate: df['col_log'] = np.log(df['col']) or np.log10(df['col'])"""
+        self.imports.add("import numpy as np")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.base == "e":
+            code += f"{node.new_alias}['{node.column}'] = np.log({node.source_alias}['{node.column}'])\n"
+        elif node.base == "10":
+            code += f"{node.new_alias}['{node.column}'] = np.log10({node.source_alias}['{node.column}'])\n"
+        else:
+            code += f"{node.new_alias}['{node.column}'] = np.log({node.source_alias}['{node.column}']) / np.log({node.base})\n"
+        code += f"print(f'Computed log (base {node.base}) for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_CeilNode(self, node):
+        """Generate: df['col_ceil'] = np.ceil(df['col'])"""
+        self.imports.add("import numpy as np")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = np.ceil({node.source_alias}['{node.column}'])\n"
+        code += f"print(f'Computed ceiling for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FloorNode(self, node):
+        """Generate: df['col_floor'] = np.floor(df['col'])"""
+        self.imports.add("import numpy as np")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = np.floor({node.source_alias}['{node.column}'])\n"
+        code += f"print(f'Computed floor for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Phase 4B: String Operations
+    def visit_UpperNode(self, node):
+        """Generate: df['col_upper'] = df['col'].str.upper()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].str.upper()\n"
+        code += f"print(f'Converted {node.column} to uppercase')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_LowerNode(self, node):
+        """Generate: df['col_lower'] = df['col'].str.lower()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].str.lower()\n"
+        code += f"print(f'Converted {node.column} to lowercase')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_StripNode(self, node):
+        """Generate: df['col_stripped'] = df['col'].str.strip()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].str.strip()\n"
+        code += f"print(f'Stripped whitespace from {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ReplaceNode(self, node):
+        """Generate: df['col'] = df['col'].str.replace(old, new)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].str.replace({self._format_value(node.old)}, {self._format_value(node.new)})\n"
+        code += f"print(f'Replaced values in {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_SplitNode(self, node):
+        """Generate: df[['col1', 'col2']] = df['col'].str.split(delimiter, expand=True)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"split_result = {node.source_alias}['{node.column}'].str.split({self._format_value(node.delimiter)}, expand=True)\n"
+        code += f"{node.new_alias} = pd.concat([{node.source_alias}, split_result], axis=1)\n"
+        code += f"print(f'Split {node.column} by delimiter')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ConcatNode(self, node):
+        """Generate: df['col'] = df['col1'] + sep + df['col2']"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        # Build concatenation expression
+        concat_expr = " + ".join([f"{node.source_alias}['{col}'].astype(str)" for col in node.columns])
+        if node.separator:
+            sep_additions = [f"{self._format_value(node.separator)}"] * (len(node.columns) - 1)
+            concat_parts = []
+            for i, col in enumerate(node.columns):
+                concat_parts.append(f"{node.source_alias}['{col}'].astype(str)")
+                if i < len(node.columns) - 1:
+                    concat_parts.append(self._format_value(node.separator))
+            concat_expr = " + ".join(concat_parts)
+        code += f"{node.new_alias}['concatenated'] = {concat_expr}\n"
+        code += f"print(f'Concatenated {len(node.columns)} columns')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_SubstringNode(self, node):
+        """Generate: df['col_sub'] = df['col'].str[start:end]"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.end:
+            code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].str[{node.start}:{node.end}]\n"
+        else:
+            code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].str[{node.start}:]\n"
+        code += f"print(f'Extracted substring from {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_LengthNode(self, node):
+        """Generate: df['col_len'] = df['col'].str.len()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_length'] = {node.source_alias}['{node.column}'].str.len()\n"
+        code += f"print(f'Computed length for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Phase 4C: Date Operations
+    def visit_ParseDatetimeNode(self, node):
+        """Generate: df['col'] = pd.to_datetime(df['col'], format=...)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.format:
+            code += f"{node.new_alias}['{node.column}'] = pd.to_datetime({node.source_alias}['{node.column}'], format={self._format_value(node.format)})\n"
+        else:
+            code += f"{node.new_alias}['{node.column}'] = pd.to_datetime({node.source_alias}['{node.column}'])\n"
+        code += f"print(f'Parsed {node.column} as datetime')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractYearNode(self, node):
+        """Generate: df['year'] = df['col'].dt.year"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_year'] = {node.source_alias}['{node.column}'].dt.year\n"
+        code += f"print(f'Extracted year from {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractMonthNode(self, node):
+        """Generate: df['month'] = df['col'].dt.month"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_month'] = {node.source_alias}['{node.column}'].dt.month\n"
+        code += f"print(f'Extracted month from {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractDayNode(self, node):
+        """Generate: df['day'] = df['col'].dt.day"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_day'] = {node.source_alias}['{node.column}'].dt.day\n"
+        code += f"print(f'Extracted day from {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_DateDiffNode(self, node):
+        """Generate: df['diff'] = (df['end'] - df['start']).dt.days"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.unit == "days":
+            code += f"{node.new_alias}['date_diff'] = ({node.source_alias}['{node.end_column}'] - {node.source_alias}['{node.start_column}']).dt.days\n"
+        elif node.unit == "hours":
+            code += f"{node.new_alias}['date_diff'] = ({node.source_alias}['{node.end_column}'] - {node.source_alias}['{node.start_column}']).dt.total_seconds() / 3600\n"
+        elif node.unit == "minutes":
+            code += f"{node.new_alias}['date_diff'] = ({node.source_alias}['{node.end_column}'] - {node.source_alias}['{node.start_column}']).dt.total_seconds() / 60\n"
+        else:
+            code += f"{node.new_alias}['date_diff'] = ({node.source_alias}['{node.end_column}'] - {node.source_alias}['{node.start_column}']).dt.days\n"
+        code += f"print(f'Computed date difference in {node.unit}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Phase 4D: Type Operations
+    def visit_AsTypeNode(self, node):
+        """Generate: df['col'] = df['col'].astype(dtype)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].astype({self._format_value(node.dtype)})\n"
+        code += f"print(f'Converted {node.column} to {node.dtype}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ToNumericNode(self, node):
+        """Generate: df['col'] = pd.to_numeric(df['col'], errors=...)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = pd.to_numeric({node.source_alias}['{node.column}'], errors={self._format_value(node.errors)})\n"
+        code += f"print(f'Converted {node.column} to numeric (errors={node.errors})')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Phase 4E: Encoding Operations
+    def visit_OneHotEncodeNode(self, node):
+        """Generate: df = pd.get_dummies(df, columns=[col])"""
+        code = f"{node.new_alias} = pd.get_dummies({node.source_alias}, columns=['{node.column}'])\n"
+        code += f"print(f'One-hot encoded {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_LabelEncodeNode(self, node):
+        """Generate: df['col'] = LabelEncoder().fit_transform(df['col'])"""
+        self.imports.add("from sklearn.preprocessing import LabelEncoder")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"le = LabelEncoder()\n"
+        code += f"{node.new_alias}['{node.column}'] = le.fit_transform({node.source_alias}['{node.column}'])\n"
+        code += f"print(f'Label encoded {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Phase 4F: Scaling Operations
+    def visit_StandardScaleNode(self, node):
+        """Generate: df['col'] = StandardScaler().fit_transform(df[['col']])"""
+        self.imports.add("from sklearn.preprocessing import StandardScaler")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"scaler = StandardScaler()\n"
+        code += f"{node.new_alias}['{node.column}'] = scaler.fit_transform({node.source_alias}[['{node.column}']])\n"
+        code += f"print(f'Standard scaled {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_MinMaxScaleNode(self, node):
+        """Generate: df['col'] = MinMaxScaler().fit_transform(df[['col']])"""
+        self.imports.add("from sklearn.preprocessing import MinMaxScaler")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"scaler = MinMaxScaler()\n"
+        code += f"{node.new_alias}['{node.column}'] = scaler.fit_transform({node.source_alias}[['{node.column}']])\n"
+        code += f"print(f'Min-Max scaled {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # ============================================================
+    # PHASE 5: CLEANING OPERATIONS - CODE GENERATORS
+    # ============================================================
+
+    def visit_IsNullNode(self, node):
+        """Generate: df['col_null'] = df['col'].isnull()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_isnull'] = {node.source_alias}['{node.column}'].isnull()\n"
+        code += f"print(f'Created null mask for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_NotNullNode(self, node):
+        """Generate: df['col_notnull'] = df['col'].notnull()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_notnull'] = {node.source_alias}['{node.column}'].notnull()\n"
+        code += f"print(f'Created not-null mask for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_CountNANode(self, node):
+        """Generate: print(df.isnull().sum())"""
+        code = f"print('Missing values count:')\n"
+        code += f"print({node.source_alias}.isnull().sum())"
+        self.code_lines.append(code)
+
+    def visit_FillForwardNode(self, node):
+        """Generate: df = df.ffill() or df['col'] = df['col'].ffill()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.column:
+            code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].ffill()\n"
+            code += f"print(f'Forward filled {node.column}')"
+        else:
+            code += f"{node.new_alias} = {node.source_alias}.ffill()\n"
+            code += f"print(f'Forward filled all columns')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FillBackwardNode(self, node):
+        """Generate: df = df.bfill() or df['col'] = df['col'].bfill()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.column:
+            code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].bfill()\n"
+            code += f"print(f'Backward filled {node.column}')"
+        else:
+            code += f"{node.new_alias} = {node.source_alias}.bfill()\n"
+            code += f"print(f'Backward filled all columns')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FillMeanNode(self, node):
+        """Generate: df['col'] = df['col'].fillna(df['col'].mean())"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].fillna({node.source_alias}['{node.column}'].mean())\n"
+        code += f"print(f'Filled {node.column} with mean value')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FillMedianNode(self, node):
+        """Generate: df['col'] = df['col'].fillna(df['col'].median())"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].fillna({node.source_alias}['{node.column}'].median())\n"
+        code += f"print(f'Filled {node.column} with median value')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_InterpolateNode(self, node):
+        """Generate: df = df.interpolate(method=...) or df['col'] = df['col'].interpolate(method=...)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.column:
+            code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].interpolate(method={self._format_value(node.method)})\n"
+            code += f"print(f'Interpolated {node.column} using {node.method} method')"
+        else:
+            code += f"{node.new_alias} = {node.source_alias}.interpolate(method={self._format_value(node.method)})\n"
+            code += f"print(f'Interpolated all columns using {node.method} method')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_DuplicatedNode(self, node):
+        """Generate: df['is_dup'] = df.duplicated(subset=[...], keep=...)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.columns:
+            code += f"{node.new_alias}['is_duplicate'] = {node.source_alias}.duplicated(subset={node.columns}, keep={self._format_value(node.keep)})\n"
+        else:
+            code += f"{node.new_alias}['is_duplicate'] = {node.source_alias}.duplicated(keep={self._format_value(node.keep)})\n"
+        code += f"print(f'Marked duplicate rows')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_CountDuplicatesNode(self, node):
+        """Generate: print(df.duplicated(subset=[...]).sum())"""
+        code = f"print('Duplicate count:')\n"
+        if node.columns:
+            code += f"print({node.source_alias}.duplicated(subset={node.columns}).sum())"
+        else:
+            code += f"print({node.source_alias}.duplicated().sum())"
         self.code_lines.append(code)

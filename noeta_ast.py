@@ -369,3 +369,249 @@ class AggregationNode(ASTNode):
 class MutationNode(ASTNode):
     new_column: str
     expression: str
+
+# ============================================================
+# PHASE 4: TRANSFORMATION OPERATIONS
+# ============================================================
+
+# Phase 4A: Math Operations
+@dataclass
+class RoundNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    decimals: int = 0
+
+@dataclass
+class AbsNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class SqrtNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class PowerNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    exponent: float = 2.0
+
+@dataclass
+class LogNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    base: str = "e"  # "e", "10", or number
+
+@dataclass
+class CeilNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class FloorNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+# Phase 4B: String Operations
+@dataclass
+class UpperNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class LowerNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class StripNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ReplaceNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    old: str = ""
+    new: str = ""
+
+@dataclass
+class SplitNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    delimiter: str = " "
+
+@dataclass
+class ConcatNode(ASTNode):
+    source_alias: str
+    columns: List[str]
+    new_alias: str
+    separator: str = ""
+
+@dataclass
+class SubstringNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    start: int = 0
+    end: Optional[int] = None
+
+@dataclass
+class LengthNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+# Phase 4C: Date/Time Operations
+@dataclass
+class ParseDatetimeNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    format: Optional[str] = None
+
+@dataclass
+class ExtractYearNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ExtractMonthNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ExtractDayNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class DateDiffNode(ASTNode):
+    source_alias: str
+    start_column: str
+    end_column: str
+    new_alias: str
+    unit: str = "days"
+
+# Phase 4D: Type Operations
+@dataclass
+class AsTypeNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    dtype: str = "str"
+
+@dataclass
+class ToNumericNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+    errors: str = "raise"  # "raise", "coerce", "ignore"
+
+# Phase 4E: Encoding Operations
+@dataclass
+class OneHotEncodeNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class LabelEncodeNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+# Phase 4F: Scaling Operations
+@dataclass
+class StandardScaleNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class MinMaxScaleNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+# ============================================================
+# PHASE 5: CLEANING OPERATIONS
+# ============================================================
+
+# Phase 5A: Missing Data Detection
+@dataclass
+class IsNullNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class NotNullNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class CountNANode(ASTNode):
+    source_alias: str
+
+# Phase 5B: Missing Data Imputation
+@dataclass
+class FillForwardNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    column: Optional[str] = None  # If None, fills all columns
+
+@dataclass
+class FillBackwardNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    column: Optional[str] = None  # If None, fills all columns
+
+@dataclass
+class FillMeanNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class FillMedianNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class InterpolateNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    column: Optional[str] = None  # If None, interpolates all columns
+    method: str = "linear"
+
+# Phase 5C: Duplicate Detection
+@dataclass
+class DuplicatedNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    columns: Optional[List[str]] = None
+    keep: str = "first"  # "first", "last", False
+
+@dataclass
+class CountDuplicatesNode(ASTNode):
+    source_alias: str
+    columns: Optional[List[str]] = None
