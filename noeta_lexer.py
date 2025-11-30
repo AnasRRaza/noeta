@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 class TokenType(Enum):
-    # Keywords
+    # Keywords - Operations
     LOAD = auto()
     SELECT = auto()
     FILTER = auto()
@@ -35,16 +35,91 @@ class TokenType(Enum):
     SAVE = auto()
     EXPORT_PLOT = auto()
     INFO = auto()
-    
-    # Other keywords
+
+    # Phase 2: Selection & Projection operations
+    SELECT_BY_TYPE = auto()
+    HEAD = auto()
+    TAIL = auto()
+    ILOC = auto()
+    LOC = auto()
+    RENAME = auto()
+    REORDER = auto()
+
+    # Phase 3: Filtering operations
+    FILTER_BETWEEN = auto()
+    FILTER_ISIN = auto()
+    FILTER_CONTAINS = auto()
+    FILTER_STARTSWITH = auto()
+    FILTER_ENDSWITH = auto()
+    FILTER_REGEX = auto()
+    FILTER_NULL = auto()
+    FILTER_NOTNULL = auto()
+    FILTER_DUPLICATES = auto()
+
+    # Phase 4: Transformation operations - Math
+    ROUND = auto()
+    ABS = auto()
+    SQRT = auto()
+    POWER = auto()
+    LOG = auto()
+    CEIL = auto()
+    FLOOR = auto()
+
+    # Phase 4: Transformation operations - String
+    UPPER = auto()
+    LOWER = auto()
+    STRIP = auto()
+    REPLACE = auto()
+    SPLIT = auto()
+    CONCAT = auto()
+    SUBSTRING = auto()
+    LENGTH = auto()
+
+    # Phase 4: Transformation operations - Date
+    PARSE_DATETIME = auto()
+    EXTRACT_YEAR = auto()
+    EXTRACT_MONTH = auto()
+    EXTRACT_DAY = auto()
+    DATE_DIFF = auto()
+
+    # Phase 4: Transformation operations - Type/Encoding/Scaling
+    ASTYPE = auto()
+    TO_NUMERIC = auto()
+    ONE_HOT_ENCODE = auto()
+    LABEL_ENCODE = auto()
+    STANDARD_SCALE = auto()
+    MINMAX_SCALE = auto()
+
+    # Phase 5: Cleaning operations
+    ISNULL = auto()
+    NOTNULL = auto()
+    COUNT_NA = auto()
+    FILL_FORWARD = auto()
+    FILL_BACKWARD = auto()
+    FILL_MEAN = auto()
+    FILL_MEDIAN = auto()
+    FILL_MODE = auto()
+    INTERPOLATE = auto()
+    DROP_DUPLICATES = auto()
+
+    # File format keywords
+    CSV = auto()
+    JSON = auto()
+    EXCEL = auto()
+    PARQUET = auto()
+    SQL = auto()
+
+    # Common keywords
     AS = auto()
     BY = auto()
     WITH = auto()
     ON = auto()
+    FROM = auto()
     AGG = auto()
     COLUMN = auto()
     COLUMNS = auto()
     VALUE = auto()
+    VALUES = auto()
     N = auto()
     RANDOM = auto()
     METHOD = auto()
@@ -56,7 +131,6 @@ class TokenType(Enum):
     TEST = auto()
     X = auto()
     Y = auto()
-    VALUES = auto()
     LABELS = auto()
     TO = auto()
     FORMAT = auto()
@@ -64,8 +138,82 @@ class TokenType(Enum):
     WIDTH = auto()
     HEIGHT = auto()
     DESC = auto()
-    WHERE = auto()  # Natural language filter syntax
-    ASC = auto()    # Sort ascending direction
+    WHERE = auto()
+    ASC = auto()
+    TYPE = auto()
+    ROWS = auto()
+    MAPPING = auto()
+    ORDER = auto()
+    LIMIT = auto()
+    OFFSET = auto()
+    FIRST = auto()
+    LAST = auto()
+    MIN = auto()
+    MAX = auto()
+    PATTERN = auto()
+    KEEP = auto()
+    SUBSET = auto()
+    AND = auto()
+    OR = auto()
+    IN = auto()
+    DECIMALS = auto()
+    OLD = auto()
+    NEW = auto()
+    DELIMITER_STR = auto()
+    START = auto()
+    END = auto()
+    DTYPE_STR = auto()
+    ERRORS = auto()
+    STRATEGY = auto()
+    AXIS = auto()
+
+    # LOAD/SAVE parameters
+    DELIMITER = auto()
+    ENCODING = auto()
+    HEADER = auto()
+    NAMES = auto()
+    USECOLS = auto()
+    DTYPE = auto()
+    SKIPROWS = auto()
+    NROWS = auto()
+    NA_VALUES = auto()
+    THOUSANDS = auto()
+    DECIMAL = auto()
+    COMMENT_CHAR = auto()
+    SKIP_BLANK_LINES = auto()
+    PARSE_DATES = auto()
+    DATE_FORMAT = auto()
+    CHUNKSIZE = auto()
+    COMPRESSION = auto()
+    LOW_MEMORY = auto()
+    MEMORY_MAP = auto()
+    ORIENT = auto()
+    TYP = auto()
+    CONVERT_AXES = auto()
+    CONVERT_DATES = auto()
+    PRECISE_FLOAT = auto()
+    DATE_UNIT = auto()
+    LINES = auto()
+    SHEET = auto()
+    SHEET_NAME = auto()
+    INDEX_COL = auto()
+    ENGINE = auto()
+    CONVERTERS = auto()
+    SKIPFOOTER = auto()
+    FILTERS = auto()
+    USE_NULLABLE_DTYPES = auto()
+    STORAGE_OPTIONS = auto()
+    PARAMS = auto()
+    COERCE_FLOAT = auto()
+    INDEX = auto()
+    INDEX_LABEL = auto()
+    NA_REP = auto()
+    MODE = auto()
+    QUOTING = auto()
+    QUOTECHAR = auto()
+    ESCAPECHAR = auto()
+    LINETERMINATOR = auto()
+    FLOAT_FORMAT = auto()
 
     # Literals
     STRING_LITERAL = auto()
@@ -114,8 +262,9 @@ class Lexer:
         self.column = 1
         self.tokens = []
         
-        # Keywords mapping
+        # Keywords mapping (case-insensitive)
         self.keywords = {
+            # Operations
             'load': TokenType.LOAD,
             'select': TokenType.SELECT,
             'filter': TokenType.FILTER,
@@ -143,14 +292,85 @@ class Lexer:
             'save': TokenType.SAVE,
             'export_plot': TokenType.EXPORT_PLOT,
             'info': TokenType.INFO,
+
+            # Phase 2: Selection & Projection
+            'select_by_type': TokenType.SELECT_BY_TYPE,
+            'head': TokenType.HEAD,
+            'tail': TokenType.TAIL,
+            'iloc': TokenType.ILOC,
+            'loc': TokenType.LOC,
+            'rename': TokenType.RENAME,
+            'reorder': TokenType.REORDER,
+
+            # Phase 3: Filtering operations
+            'filter_between': TokenType.FILTER_BETWEEN,
+            'filter_isin': TokenType.FILTER_ISIN,
+            'filter_contains': TokenType.FILTER_CONTAINS,
+            'filter_startswith': TokenType.FILTER_STARTSWITH,
+            'filter_endswith': TokenType.FILTER_ENDSWITH,
+            'filter_regex': TokenType.FILTER_REGEX,
+            'filter_null': TokenType.FILTER_NULL,
+            'filter_notnull': TokenType.FILTER_NOTNULL,
+            'filter_duplicates': TokenType.FILTER_DUPLICATES,
+
+            # Phase 4: Transformation operations
+            'round': TokenType.ROUND,
+            'abs': TokenType.ABS,
+            'sqrt': TokenType.SQRT,
+            'power': TokenType.POWER,
+            'log': TokenType.LOG,
+            'ceil': TokenType.CEIL,
+            'floor': TokenType.FLOOR,
+            'upper': TokenType.UPPER,
+            'lower': TokenType.LOWER,
+            'strip': TokenType.STRIP,
+            'replace': TokenType.REPLACE,
+            'split': TokenType.SPLIT,
+            'concat': TokenType.CONCAT,
+            'substring': TokenType.SUBSTRING,
+            'length': TokenType.LENGTH,
+            'parse_datetime': TokenType.PARSE_DATETIME,
+            'extract_year': TokenType.EXTRACT_YEAR,
+            'extract_month': TokenType.EXTRACT_MONTH,
+            'extract_day': TokenType.EXTRACT_DAY,
+            'date_diff': TokenType.DATE_DIFF,
+            'astype': TokenType.ASTYPE,
+            'to_numeric': TokenType.TO_NUMERIC,
+            'one_hot_encode': TokenType.ONE_HOT_ENCODE,
+            'label_encode': TokenType.LABEL_ENCODE,
+            'standard_scale': TokenType.STANDARD_SCALE,
+            'minmax_scale': TokenType.MINMAX_SCALE,
+
+            # Phase 5: Cleaning operations
+            'isnull': TokenType.ISNULL,
+            'notnull': TokenType.NOTNULL,
+            'count_na': TokenType.COUNT_NA,
+            'fill_forward': TokenType.FILL_FORWARD,
+            'fill_backward': TokenType.FILL_BACKWARD,
+            'fill_mean': TokenType.FILL_MEAN,
+            'fill_median': TokenType.FILL_MEDIAN,
+            'fill_mode': TokenType.FILL_MODE,
+            'interpolate': TokenType.INTERPOLATE,
+            'drop_duplicates': TokenType.DROP_DUPLICATES,
+
+            # File formats
+            'csv': TokenType.CSV,
+            'json': TokenType.JSON,
+            'excel': TokenType.EXCEL,
+            'parquet': TokenType.PARQUET,
+            'sql': TokenType.SQL,
+
+            # Common keywords
             'as': TokenType.AS,
             'by': TokenType.BY,
             'with': TokenType.WITH,
             'on': TokenType.ON,
+            'from': TokenType.FROM,
             'agg': TokenType.AGG,
             'column': TokenType.COLUMN,
             'columns': TokenType.COLUMNS,
             'value': TokenType.VALUE,
+            'values': TokenType.VALUES,
             'n': TokenType.N,
             'random': TokenType.RANDOM,
             'method': TokenType.METHOD,
@@ -162,7 +382,6 @@ class Lexer:
             'test': TokenType.TEST,
             'x': TokenType.X,
             'y': TokenType.Y,
-            'values': TokenType.VALUES,
             'labels': TokenType.LABELS,
             'to': TokenType.TO,
             'format': TokenType.FORMAT,
@@ -172,6 +391,80 @@ class Lexer:
             'desc': TokenType.DESC,
             'where': TokenType.WHERE,
             'asc': TokenType.ASC,
+            'type': TokenType.TYPE,
+            'rows': TokenType.ROWS,
+            'mapping': TokenType.MAPPING,
+            'order': TokenType.ORDER,
+            'limit': TokenType.LIMIT,
+            'offset': TokenType.OFFSET,
+            'first': TokenType.FIRST,
+            'last': TokenType.LAST,
+            'min': TokenType.MIN,
+            'max': TokenType.MAX,
+            'pattern': TokenType.PATTERN,
+            'keep': TokenType.KEEP,
+            'subset': TokenType.SUBSET,
+            'and': TokenType.AND,
+            'or': TokenType.OR,
+            'in': TokenType.IN,
+            'decimals': TokenType.DECIMALS,
+            'old': TokenType.OLD,
+            'new': TokenType.NEW,
+            'delimiter_str': TokenType.DELIMITER_STR,
+            'start': TokenType.START,
+            'end': TokenType.END,
+            'dtype_str': TokenType.DTYPE_STR,
+            'errors': TokenType.ERRORS,
+            'strategy': TokenType.STRATEGY,
+            'axis': TokenType.AXIS,
+
+            # LOAD/SAVE parameters
+            'delimiter': TokenType.DELIMITER,
+            'encoding': TokenType.ENCODING,
+            'header': TokenType.HEADER,
+            'names': TokenType.NAMES,
+            'usecols': TokenType.USECOLS,
+            'dtype': TokenType.DTYPE,
+            'skiprows': TokenType.SKIPROWS,
+            'nrows': TokenType.NROWS,
+            'na_values': TokenType.NA_VALUES,
+            'thousands': TokenType.THOUSANDS,
+            'decimal': TokenType.DECIMAL,
+            'comment': TokenType.COMMENT_CHAR,
+            'skip_blank_lines': TokenType.SKIP_BLANK_LINES,
+            'parse_dates': TokenType.PARSE_DATES,
+            'date_format': TokenType.DATE_FORMAT,
+            'chunksize': TokenType.CHUNKSIZE,
+            'compression': TokenType.COMPRESSION,
+            'low_memory': TokenType.LOW_MEMORY,
+            'memory_map': TokenType.MEMORY_MAP,
+            'orient': TokenType.ORIENT,
+            'typ': TokenType.TYP,
+            'convert_axes': TokenType.CONVERT_AXES,
+            'convert_dates': TokenType.CONVERT_DATES,
+            'precise_float': TokenType.PRECISE_FLOAT,
+            'date_unit': TokenType.DATE_UNIT,
+            'lines': TokenType.LINES,
+            'sheet': TokenType.SHEET,
+            'sheet_name': TokenType.SHEET_NAME,
+            'index_col': TokenType.INDEX_COL,
+            'engine': TokenType.ENGINE,
+            'converters': TokenType.CONVERTERS,
+            'skipfooter': TokenType.SKIPFOOTER,
+            'filters': TokenType.FILTERS,
+            'use_nullable_dtypes': TokenType.USE_NULLABLE_DTYPES,
+            'storage_options': TokenType.STORAGE_OPTIONS,
+            'params': TokenType.PARAMS,
+            'coerce_float': TokenType.COERCE_FLOAT,
+            'index': TokenType.INDEX,
+            'index_label': TokenType.INDEX_LABEL,
+            'na_rep': TokenType.NA_REP,
+            'mode': TokenType.MODE,
+            'quoting': TokenType.QUOTING,
+            'quotechar': TokenType.QUOTECHAR,
+            'escapechar': TokenType.ESCAPECHAR,
+            'lineterminator': TokenType.LINETERMINATOR,
+            'float_format': TokenType.FLOAT_FORMAT,
         }
     
     def current_char(self) -> Optional[str]:

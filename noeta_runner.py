@@ -28,7 +28,7 @@ def compile_noeta(source_code: str) -> str:
     except Exception as e:
         raise RuntimeError(f"Compilation error: {str(e)}")
 
-def execute_noeta(source_code: str, verbose: bool = False):
+def execute_noeta(source_code: str, verbose: bool = True):
     """Compile and execute Noeta source code."""
     try:
         # Compile to Python

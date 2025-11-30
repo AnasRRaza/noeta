@@ -65,10 +65,336 @@ class CodeGenerator:
             code = f"{node.alias} = pd.read_excel('{node.file_path}')"
         else:
             code = f"{node.alias} = pd.read_csv('{node.file_path}')"  # Default to CSV
-        
+
         self.code_lines.append(code)
         self.code_lines.append(f"print(f'Loaded {node.file_path} as {node.alias}: {{len({node.alias})}} rows, {{len({node.alias}.columns)}} columns')")
-    
+
+    def visit_LoadCSVNode(self, node: LoadCSVNode):
+        """Generate code for enhanced CSV loading with parameters"""
+        params_str = self._build_params_str(node.params)
+        if params_str:
+            code = f"{node.alias} = pd.read_csv('{node.filepath}', {params_str})"
+        else:
+            code = f"{node.alias} = pd.read_csv('{node.filepath}')"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Loaded {node.filepath} as {node.alias}: {{len({node.alias})}} rows, {{len({node.alias}.columns)}} columns')")
+
+    def visit_LoadJSONNode(self, node: LoadJSONNode):
+        """Generate code for JSON loading with parameters"""
+        params_str = self._build_params_str(node.params)
+        if params_str:
+            code = f"{node.alias} = pd.read_json('{node.filepath}', {params_str})"
+        else:
+            code = f"{node.alias} = pd.read_json('{node.filepath}')"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Loaded {node.filepath} as {node.alias}')")
+
+    def visit_LoadExcelNode(self, node: LoadExcelNode):
+        """Generate code for Excel loading with parameters"""
+        params_str = self._build_params_str(node.params)
+        if params_str:
+            code = f"{node.alias} = pd.read_excel('{node.filepath}', {params_str})"
+        else:
+            code = f"{node.alias} = pd.read_excel('{node.filepath}')"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Loaded {node.filepath} as {node.alias}: {{len({node.alias})}} rows, {{len({node.alias}.columns)}} columns')")
+
+    def visit_LoadParquetNode(self, node: LoadParquetNode):
+        """Generate code for Parquet loading with parameters"""
+        params_str = self._build_params_str(node.params)
+        if params_str:
+            code = f"{node.alias} = pd.read_parquet('{node.filepath}', {params_str})"
+        else:
+            code = f"{node.alias} = pd.read_parquet('{node.filepath}')"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Loaded {node.filepath} as {node.alias}: {{len({node.alias})}} rows, {{len({node.alias}.columns)}} columns')")
+
+    def visit_LoadSQLNode(self, node: LoadSQLNode):
+        """Generate code for SQL loading with parameters"""
+        # Add SQLAlchemy import if needed
+        self.imports.add("from sqlalchemy import create_engine")
+
+        # Create engine from connection string
+        self.code_lines.append(f"_engine = create_engine('{node.connection}')")
+
+        # Build parameters (exclude 'params' from params dict, handle separately)
+        sql_params = {k: v for k, v in node.params.items() if k != 'params'}
+        params_str = self._build_params_str(sql_params)
+
+        # Handle query parameters
+        if 'params' in node.params:
+            query_params = node.params['params']
+            params_dict_str = self._format_value(query_params)
+            if params_str:
+                code = f"{node.alias} = pd.read_sql('''{node.query}''', con=_engine, params={params_dict_str}, {params_str})"
+            else:
+                code = f"{node.alias} = pd.read_sql('''{node.query}''', con=_engine, params={params_dict_str})"
+        else:
+            if params_str:
+                code = f"{node.alias} = pd.read_sql('''{node.query}''', con=_engine, {params_str})"
+            else:
+                code = f"{node.alias} = pd.read_sql('''{node.query}''', con=_engine)"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Loaded from SQL as {node.alias}: {{len({node.alias})}} rows, {{len({node.alias}.columns)}} columns')")
+
+    def visit_SaveCSVNode(self, node: SaveCSVNode):
+        """Generate code for enhanced CSV saving with parameters"""
+        params_str = self._build_params_str(node.params)
+        if params_str:
+            code = f"{node.source_alias}.to_csv('{node.filepath}', {params_str})"
+        else:
+            code = f"{node.source_alias}.to_csv('{node.filepath}')"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Saved {node.source_alias} to {node.filepath}')")
+
+    def visit_SaveJSONNode(self, node: SaveJSONNode):
+        """Generate code for JSON saving with parameters"""
+        params_str = self._build_params_str(node.params)
+        if params_str:
+            code = f"{node.source_alias}.to_json('{node.filepath}', {params_str})"
+        else:
+            code = f"{node.source_alias}.to_json('{node.filepath}')"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Saved {node.source_alias} to {node.filepath}')")
+
+    def visit_SaveExcelNode(self, node: SaveExcelNode):
+        """Generate code for Excel saving with parameters"""
+        params_str = self._build_params_str(node.params)
+        if params_str:
+            code = f"{node.source_alias}.to_excel('{node.filepath}', {params_str})"
+        else:
+            code = f"{node.source_alias}.to_excel('{node.filepath}')"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Saved {node.source_alias} to {node.filepath}')")
+
+    def visit_SaveParquetNode(self, node: SaveParquetNode):
+        """Generate code for Parquet saving with parameters"""
+        params_str = self._build_params_str(node.params)
+        if params_str:
+            code = f"{node.source_alias}.to_parquet('{node.filepath}', {params_str})"
+        else:
+            code = f"{node.source_alias}.to_parquet('{node.filepath}')"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Saved {node.source_alias} to {node.filepath}')")
+
+    # Phase 2: Selection & Projection Code Generators
+
+    def visit_SelectByTypeNode(self, node: SelectByTypeNode):
+        """Generate code for selecting columns by data type"""
+        # Map DSL type names to pandas dtype categories
+        type_mapping = {
+            'numeric': 'number',
+            'number': 'number',
+            'int': 'int',
+            'integer': 'int',
+            'float': 'float',
+            'string': 'object',
+            'str': 'object',
+            'object': 'object',
+            'datetime': 'datetime',
+            'date': 'datetime',
+            'bool': 'bool',
+            'boolean': 'bool',
+            'category': 'category'
+        }
+
+        pandas_type = type_mapping.get(node.dtype.lower(), node.dtype)
+        code = f"{node.new_alias} = {node.source_alias}.select_dtypes(include=['{pandas_type}'])"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Selected {{len({node.new_alias}.columns)}} columns of type {node.dtype} from {node.source_alias}')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_HeadNode(self, node: HeadNode):
+        """Generate code for getting first N rows"""
+        code = f"{node.new_alias} = {node.source_alias}.head({node.n_rows})"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Selected first {node.n_rows} rows from {node.source_alias}')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_TailNode(self, node: TailNode):
+        """Generate code for getting last N rows"""
+        code = f"{node.new_alias} = {node.source_alias}.tail({node.n_rows})"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Selected last {node.n_rows} rows from {node.source_alias}')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ILocNode(self, node: ILocNode):
+        """Generate code for position-based indexing"""
+        # Handle row slicing
+        if isinstance(node.row_slice, tuple):
+            row_slice_str = f"{node.row_slice[0]}:{node.row_slice[1]}"
+        else:
+            row_slice_str = str(node.row_slice)
+
+        # Handle optional column slicing
+        if node.col_slice:
+            if isinstance(node.col_slice, tuple):
+                col_slice_str = f"{node.col_slice[0]}:{node.col_slice[1]}"
+            else:
+                col_slice_str = str(node.col_slice)
+            code = f"{node.new_alias} = {node.source_alias}.iloc[{row_slice_str}, {col_slice_str}]"
+        else:
+            code = f"{node.new_alias} = {node.source_alias}.iloc[{row_slice_str}]"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Selected rows by position from {node.source_alias}')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_LocNode(self, node: LocNode):
+        """Generate code for label-based indexing"""
+        # Format row labels
+        if isinstance(node.row_labels, list):
+            row_labels_str = str(node.row_labels)
+        else:
+            row_labels_str = self._format_value(node.row_labels)
+
+        # Handle optional column labels
+        if node.col_labels:
+            col_labels_str = str(node.col_labels)
+            code = f"{node.new_alias} = {node.source_alias}.loc[{row_labels_str}, {col_labels_str}]"
+        else:
+            code = f"{node.new_alias} = {node.source_alias}.loc[{row_labels_str}]"
+
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Selected rows by label from {node.source_alias}')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_RenameColumnsNode(self, node: RenameColumnsNode):
+        """Generate code for renaming columns"""
+        mapping_str = str(node.mapping)
+        code = f"{node.new_alias} = {node.source_alias}.rename(columns={mapping_str})"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Renamed {{len({mapping_str})}} columns in {node.source_alias}')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ReorderColumnsNode(self, node: ReorderColumnsNode):
+        """Generate code for reordering columns"""
+        column_order_str = str(node.column_order)
+        code = f"{node.new_alias} = {node.source_alias}[{column_order_str}]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Reordered columns in {node.source_alias}')")
+        self.symbol_table[node.new_alias] = True
+
+    # Phase 3: Filtering Code Generators
+
+    def visit_FilterBetweenNode(self, node: FilterBetweenNode):
+        """Generate code for filtering rows where column value is between min and max"""
+        min_str = self._format_value(node.min_value)
+        max_str = self._format_value(node.max_value)
+        code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}['{node.column}'].between({min_str}, {max_str})]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} rows where {node.column} is between {min_str} and {max_str}')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FilterIsInNode(self, node: FilterIsInNode):
+        """Generate code for filtering rows where column value is in a list"""
+        values_str = str(node.values)
+        code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}['{node.column}'].isin({values_str})]"
+        self.code_lines.append(code)
+        # Don't use f-string for values to avoid quote conflicts
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} rows where {node.column} is in specified values')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FilterContainsNode(self, node: FilterContainsNode):
+        """Generate code for filtering rows where column contains a pattern"""
+        code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}['{node.column}'].str.contains('{node.pattern}', na=False)]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} rows where {node.column} contains \"{node.pattern}\"')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FilterStartsWithNode(self, node: FilterStartsWithNode):
+        """Generate code for filtering rows where column starts with a pattern"""
+        code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}['{node.column}'].str.startswith('{node.pattern}', na=False)]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} rows where {node.column} starts with \"{node.pattern}\"')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FilterEndsWithNode(self, node: FilterEndsWithNode):
+        """Generate code for filtering rows where column ends with a pattern"""
+        code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}['{node.column}'].str.endswith('{node.pattern}', na=False)]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} rows where {node.column} ends with \"{node.pattern}\"')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FilterRegexNode(self, node: FilterRegexNode):
+        """Generate code for filtering rows where column matches a regex pattern"""
+        code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}['{node.column}'].str.match('{node.pattern}', na=False)]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} rows where {node.column} matches regex \"{node.pattern}\"')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FilterNullNode(self, node: FilterNullNode):
+        """Generate code for filtering rows where column is null"""
+        code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}['{node.column}'].isnull()]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} rows where {node.column} is null')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FilterNotNullNode(self, node: FilterNotNullNode):
+        """Generate code for filtering rows where column is not null"""
+        code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}['{node.column}'].notnull()]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} rows where {node.column} is not null')")
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FilterDuplicatesNode(self, node: FilterDuplicatesNode):
+        """Generate code for filtering duplicate rows"""
+        if node.subset:
+            subset_str = str(node.subset)
+            code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}.duplicated(subset={subset_str}, keep='{node.keep}')]"
+        else:
+            code = f"{node.new_alias} = {node.source_alias}[{node.source_alias}.duplicated(keep='{node.keep}')]"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {{len({node.new_alias})}} duplicate rows from {node.source_alias}')")
+        self.symbol_table[node.new_alias] = True
+
+    def _build_params_str(self, params: dict) -> str:
+        """
+        Convert parameter dictionary to string for pandas function call.
+        Handles proper formatting for strings, numbers, lists, dicts, etc.
+        """
+        if not params:
+            return ""
+
+        param_parts = []
+        for key, value in params.items():
+            formatted_value = self._format_value(value)
+            param_parts.append(f"{key}={formatted_value}")
+
+        return ", ".join(param_parts)
+
+    def _format_value(self, value):
+        """Format a value appropriately for Python code"""
+        if value is None:
+            return "None"
+        elif isinstance(value, bool):
+            return str(value)
+        elif isinstance(value, str):
+            # Escape quotes in strings
+            escaped = value.replace("'", "\\'")
+            return f"'{escaped}'"
+        elif isinstance(value, (int, float)):
+            return str(value)
+        elif isinstance(value, list):
+            # Format list elements
+            formatted_items = [self._format_value(item) for item in value]
+            return f"[{', '.join(formatted_items)}]"
+        elif isinstance(value, dict):
+            # Format dict items
+            formatted_items = [f"{self._format_value(k)}: {self._format_value(v)}" for k, v in value.items()]
+            return f"{{{', '.join(formatted_items)}}}"
+        else:
+            return str(value)
+
     def visit_SelectNode(self, node: SelectNode):
         columns_str = str(node.columns).replace("'", '"')
         code = f"{node.new_alias} = {node.source_alias}[{columns_str}].copy()"

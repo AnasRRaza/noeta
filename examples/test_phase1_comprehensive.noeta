@@ -1,0 +1,20 @@
+# Comprehensive Phase 1 Test: All I/O Operations
+# Tests all load formats and save operations with various parameters
+
+# Test 1: CSV Load - Basic
+load csv "data/sales_data.csv" as sales1
+
+# Test 2: CSV Load - With multiple parameters
+load csv "data/sales_data.csv" with delimiter="," encoding="utf-8" header=0 skiprows=0 as sales2
+
+# Test 3: CSV Load - With usecols (select specific columns)
+load csv "data/sales_data.csv" with usecols=["product_id", "price", "quantity"] as sales3
+
+# Test 4: Display info about loaded data
+info sales3
+
+# Test 5: Save to CSV with custom parameters
+save sales3 to "output/test_output.csv" with index=false encoding="utf-8"
+
+# Test 6: Summary statistics
+summary sales1

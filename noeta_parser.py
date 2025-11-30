@@ -47,10 +47,11 @@ class Parser:
         token = self.current_token()
         if not token:
             return None
-        
+
         # Data manipulation statements
         if token.type == TokenType.LOAD:
-            return self.parse_load()
+            # Enhanced load dispatching based on next token
+            return self.parse_load_enhanced()
         elif token.type == TokenType.SELECT:
             return self.parse_select()
         elif token.type == TokenType.FILTER:
@@ -63,6 +64,43 @@ class Parser:
             return self.parse_groupby()
         elif token.type == TokenType.SAMPLE:
             return self.parse_sample()
+
+        # Phase 2: Selection & Projection operations
+        elif token.type == TokenType.SELECT_BY_TYPE:
+            return self.parse_select_by_type()
+        elif token.type == TokenType.HEAD:
+            return self.parse_head()
+        elif token.type == TokenType.TAIL:
+            return self.parse_tail()
+        elif token.type == TokenType.ILOC:
+            return self.parse_iloc()
+        elif token.type == TokenType.LOC:
+            return self.parse_loc()
+        elif token.type == TokenType.RENAME:
+            return self.parse_rename_columns()
+        elif token.type == TokenType.REORDER:
+            return self.parse_reorder_columns()
+
+        # Phase 3: Filtering operations
+        elif token.type == TokenType.FILTER_BETWEEN:
+            return self.parse_filter_between()
+        elif token.type == TokenType.FILTER_ISIN:
+            return self.parse_filter_isin()
+        elif token.type == TokenType.FILTER_CONTAINS:
+            return self.parse_filter_contains()
+        elif token.type == TokenType.FILTER_STARTSWITH:
+            return self.parse_filter_startswith()
+        elif token.type == TokenType.FILTER_ENDSWITH:
+            return self.parse_filter_endswith()
+        elif token.type == TokenType.FILTER_REGEX:
+            return self.parse_filter_regex()
+        elif token.type == TokenType.FILTER_NULL:
+            return self.parse_filter_null()
+        elif token.type == TokenType.FILTER_NOTNULL:
+            return self.parse_filter_notnull()
+        elif token.type == TokenType.FILTER_DUPLICATES:
+            return self.parse_filter_duplicates()
+
         elif token.type == TokenType.DROPNA:
             return self.parse_dropna()
         elif token.type == TokenType.FILLNA:
@@ -106,7 +144,7 @@ class Parser:
         
         # File operations
         elif token.type == TokenType.SAVE:
-            return self.parse_save()
+            return self.parse_save_enhanced()
         elif token.type == TokenType.EXPORT_PLOT:
             return self.parse_export_plot()
         
@@ -119,7 +157,422 @@ class Parser:
         self.expect(TokenType.AS)
         alias = self.expect(TokenType.IDENTIFIER).value
         return LoadNode(file_path, alias)
-    
+
+    def parse_load_enhanced(self):
+        """
+        Enhanced load dispatcher supporting:
+        - load csv "file.csv" as alias
+        - load csv "file.csv" with params as alias
+        - load json "file.json" as alias
+        - load excel "file.xlsx" as alias
+        - load parquet "file.parquet" as alias
+        - load sql "query" from "connection" as alias
+        """
+        self.expect(TokenType.LOAD)
+
+        # Check for format keyword
+        if self.match(TokenType.CSV):
+            return self.parse_load_csv()
+        elif self.match(TokenType.JSON):
+            return self.parse_load_json()
+        elif self.match(TokenType.EXCEL):
+            return self.parse_load_excel()
+        elif self.match(TokenType.PARQUET):
+            return self.parse_load_parquet()
+        elif self.match(TokenType.SQL):
+            return self.parse_load_sql()
+        elif self.match(TokenType.STRING_LITERAL):
+            # Fallback to old simple load
+            file_path = self.expect(TokenType.STRING_LITERAL).value
+            self.expect(TokenType.AS)
+            alias = self.expect(TokenType.IDENTIFIER).value
+            return LoadNode(file_path, alias)
+        else:
+            raise SyntaxError(f"Expected file format (csv, json, excel, parquet, sql) or file path after 'load'")
+
+    def parse_load_csv(self) -> LoadCSVNode:
+        """Parse: load csv "file.csv" [with params] as alias"""
+        self.advance()  # consume CSV token
+        filepath = self.expect(TokenType.STRING_LITERAL).value
+
+        # Parse optional parameters
+        params = {}
+        if self.match(TokenType.WITH):
+            self.advance()
+            params = self.parse_params()
+
+        self.expect(TokenType.AS)
+        alias = self.expect(TokenType.IDENTIFIER).value
+        return LoadCSVNode(filepath, params, alias)
+
+    def parse_load_json(self) -> LoadJSONNode:
+        """Parse: load json "file.json" [with params] as alias"""
+        self.advance()  # consume JSON token
+        filepath = self.expect(TokenType.STRING_LITERAL).value
+
+        params = {}
+        if self.match(TokenType.WITH):
+            self.advance()
+            params = self.parse_params()
+
+        self.expect(TokenType.AS)
+        alias = self.expect(TokenType.IDENTIFIER).value
+        return LoadJSONNode(filepath, params, alias)
+
+    def parse_load_excel(self) -> LoadExcelNode:
+        """Parse: load excel "file.xlsx" [with params] as alias"""
+        self.advance()  # consume EXCEL token
+        filepath = self.expect(TokenType.STRING_LITERAL).value
+
+        params = {}
+        if self.match(TokenType.WITH):
+            self.advance()
+            params = self.parse_params()
+
+        self.expect(TokenType.AS)
+        alias = self.expect(TokenType.IDENTIFIER).value
+        return LoadExcelNode(filepath, params, alias)
+
+    def parse_load_parquet(self) -> LoadParquetNode:
+        """Parse: load parquet "file.parquet" [with params] as alias"""
+        self.advance()  # consume PARQUET token
+        filepath = self.expect(TokenType.STRING_LITERAL).value
+
+        params = {}
+        if self.match(TokenType.WITH):
+            self.advance()
+            params = self.parse_params()
+
+        self.expect(TokenType.AS)
+        alias = self.expect(TokenType.IDENTIFIER).value
+        return LoadParquetNode(filepath, params, alias)
+
+    def parse_load_sql(self) -> LoadSQLNode:
+        """Parse: load sql "query" from "connection" [with params] as alias"""
+        self.advance()  # consume SQL token
+        query = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.FROM)
+        connection = self.expect(TokenType.STRING_LITERAL).value
+
+        params = {}
+        if self.match(TokenType.WITH):
+            self.advance()
+            params = self.parse_params()
+
+        self.expect(TokenType.AS)
+        alias = self.expect(TokenType.IDENTIFIER).value
+        return LoadSQLNode(query, connection, params, alias)
+
+    def parse_save_enhanced(self):
+        """
+        Enhanced save dispatcher supporting:
+        - save data to "file.csv"
+        - save data to "file.csv" with params
+        """
+        self.expect(TokenType.SAVE)
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.TO)
+        filepath = self.expect(TokenType.STRING_LITERAL).value
+
+        # Parse optional parameters
+        params = {}
+        if self.match(TokenType.WITH):
+            self.advance()
+            params = self.parse_params()
+
+        # Determine format from extension or params
+        ext = filepath.lower().split('.')[-1]
+        if ext == 'csv' or 'csv' in filepath.lower():
+            return SaveCSVNode(source, filepath, params)
+        elif ext == 'json':
+            return SaveJSONNode(source, filepath, params)
+        elif ext in ['xlsx', 'xls']:
+            return SaveExcelNode(source, filepath, params)
+        elif ext == 'parquet':
+            return SaveParquetNode(source, filepath, params)
+        else:
+            # Default to CSV
+            return SaveCSVNode(source, filepath, params)
+
+    # Phase 2: Selection & Projection Parser Methods
+
+    def parse_select_by_type(self) -> SelectByTypeNode:
+        """Parse: select_by_type data with type="numeric" as alias"""
+        self.advance()  # consume SELECT_BY_TYPE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.TYPE)
+        self.expect(TokenType.ASSIGN)
+        dtype = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return SelectByTypeNode(source, dtype, new_alias)
+
+    def parse_head(self) -> HeadNode:
+        """Parse: head data with n=10 as alias"""
+        self.advance()  # consume HEAD
+        source = self.expect(TokenType.IDENTIFIER).value
+
+        # Default to 5 rows if no 'with' clause
+        n_rows = 5
+        if self.match(TokenType.WITH):
+            self.advance()
+            self.expect(TokenType.N)
+            self.expect(TokenType.ASSIGN)
+            n_rows = self.expect(TokenType.NUMERIC_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return HeadNode(source, int(n_rows), new_alias)
+
+    def parse_tail(self) -> TailNode:
+        """Parse: tail data with n=10 as alias"""
+        self.advance()  # consume TAIL
+        source = self.expect(TokenType.IDENTIFIER).value
+
+        # Default to 5 rows if no 'with' clause
+        n_rows = 5
+        if self.match(TokenType.WITH):
+            self.advance()
+            self.expect(TokenType.N)
+            self.expect(TokenType.ASSIGN)
+            n_rows = self.expect(TokenType.NUMERIC_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return TailNode(source, int(n_rows), new_alias)
+
+    def parse_iloc(self) -> ILocNode:
+        """Parse: iloc data with rows=[0,10] as alias OR iloc data with rows=[0,10] columns=[0,3] as alias"""
+        self.advance()  # consume ILOC
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+
+        row_slice = None
+        col_slice = None
+
+        # Parse rows parameter
+        if self.match(TokenType.ROWS):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            row_slice = self.parse_slice_value()
+
+        # Parse optional columns parameter
+        if self.match(TokenType.COLUMNS):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            col_slice = self.parse_slice_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ILocNode(source, row_slice, col_slice, new_alias)
+
+    def parse_loc(self) -> LocNode:
+        """Parse: loc data with rows=["label1", "label2"] as alias"""
+        self.advance()  # consume LOC
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+
+        row_labels = None
+        col_labels = None
+
+        # Parse rows parameter
+        if self.match(TokenType.ROWS):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            row_labels = self.parse_value()
+
+        # Parse optional columns parameter
+        if self.match(TokenType.COLUMNS):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            col_labels = self.parse_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return LocNode(source, row_labels, col_labels, new_alias)
+
+    def parse_rename_columns(self) -> RenameColumnsNode:
+        """Parse: rename data with mapping={"old": "new", "old2": "new2"} as alias"""
+        self.advance()  # consume RENAME
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.MAPPING)
+        self.expect(TokenType.ASSIGN)
+        mapping = self.parse_dict_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RenameColumnsNode(source, mapping, new_alias)
+
+    def parse_reorder_columns(self) -> ReorderColumnsNode:
+        """Parse: reorder data with order=["col1", "col2", "col3"] as alias"""
+        self.advance()  # consume REORDER
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.ORDER)
+        self.expect(TokenType.ASSIGN)
+        column_order = self.parse_list_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ReorderColumnsNode(source, column_order, new_alias)
+
+    def parse_slice_value(self):
+        """Parse slice notation: [start, end] or single value"""
+        if self.match(TokenType.LBRACKET):
+            self.advance()
+            start = self.expect(TokenType.NUMERIC_LITERAL).value
+            self.expect(TokenType.COMMA)
+            end = self.expect(TokenType.NUMERIC_LITERAL).value
+            self.expect(TokenType.RBRACKET)
+            return (int(start), int(end))
+        else:
+            value = self.expect(TokenType.NUMERIC_LITERAL).value
+            return int(value)
+
+    # Phase 3: Filtering Parser Methods
+
+    def parse_filter_between(self) -> FilterBetweenNode:
+        """Parse: filter_between data with column="price" min=10 max=100 as alias"""
+        self.advance()  # consume FILTER_BETWEEN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.COLUMN)
+        self.expect(TokenType.ASSIGN)
+        column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.MIN)
+        self.expect(TokenType.ASSIGN)
+        min_value = self.parse_value()
+        self.expect(TokenType.MAX)
+        self.expect(TokenType.ASSIGN)
+        max_value = self.parse_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterBetweenNode(source, column, min_value, max_value, new_alias)
+
+    def parse_filter_isin(self) -> FilterIsInNode:
+        """Parse: filter_isin data with column="category" values=["A", "B", "C"] as alias"""
+        self.advance()  # consume FILTER_ISIN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.COLUMN)
+        self.expect(TokenType.ASSIGN)
+        column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.VALUES)
+        self.expect(TokenType.ASSIGN)
+        values = self.parse_list_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterIsInNode(source, column, values, new_alias)
+
+    def parse_filter_contains(self) -> FilterContainsNode:
+        """Parse: filter_contains data with column="product" pattern="laptop" as alias"""
+        self.advance()  # consume FILTER_CONTAINS
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.COLUMN)
+        self.expect(TokenType.ASSIGN)
+        column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.PATTERN)
+        self.expect(TokenType.ASSIGN)
+        pattern = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterContainsNode(source, column, pattern, new_alias)
+
+    def parse_filter_startswith(self) -> FilterStartsWithNode:
+        """Parse: filter_startswith data with column="product" pattern="ABC" as alias"""
+        self.advance()  # consume FILTER_STARTSWITH
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.COLUMN)
+        self.expect(TokenType.ASSIGN)
+        column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.PATTERN)
+        self.expect(TokenType.ASSIGN)
+        pattern = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterStartsWithNode(source, column, pattern, new_alias)
+
+    def parse_filter_endswith(self) -> FilterEndsWithNode:
+        """Parse: filter_endswith data with column="product" pattern=".pdf" as alias"""
+        self.advance()  # consume FILTER_ENDSWITH
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.COLUMN)
+        self.expect(TokenType.ASSIGN)
+        column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.PATTERN)
+        self.expect(TokenType.ASSIGN)
+        pattern = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterEndsWithNode(source, column, pattern, new_alias)
+
+    def parse_filter_regex(self) -> FilterRegexNode:
+        """Parse: filter_regex data with column="email" pattern=".*@gmail\\.com" as alias"""
+        self.advance()  # consume FILTER_REGEX
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.COLUMN)
+        self.expect(TokenType.ASSIGN)
+        column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.PATTERN)
+        self.expect(TokenType.ASSIGN)
+        pattern = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterRegexNode(source, column, pattern, new_alias)
+
+    def parse_filter_null(self) -> FilterNullNode:
+        """Parse: filter_null data with column="discount" as alias"""
+        self.advance()  # consume FILTER_NULL
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.COLUMN)
+        self.expect(TokenType.ASSIGN)
+        column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterNullNode(source, column, new_alias)
+
+    def parse_filter_notnull(self) -> FilterNotNullNode:
+        """Parse: filter_notnull data with column="discount" as alias"""
+        self.advance()  # consume FILTER_NOTNULL
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.COLUMN)
+        self.expect(TokenType.ASSIGN)
+        column = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterNotNullNode(source, column, new_alias)
+
+    def parse_filter_duplicates(self) -> FilterDuplicatesNode:
+        """Parse: filter_duplicates data with keep="first" as alias OR filter_duplicates data with subset=["col1"] keep="first" as alias"""
+        self.advance()  # consume FILTER_DUPLICATES
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+
+        subset = None
+        keep = "first"  # default
+
+        # Parse optional subset parameter
+        if self.match(TokenType.SUBSET):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            subset = self.parse_list_value()
+
+        # Parse keep parameter
+        if self.match(TokenType.KEEP):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            keep = self.expect(TokenType.STRING_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FilterDuplicatesNode(source, subset, keep, new_alias)
+
     def parse_select(self) -> SelectNode:
         """
         Supports:
@@ -734,3 +1187,155 @@ class Parser:
 
         # Join tokens with spaces for readability
         return ' '.join(expr_tokens)
+
+    def parse_params(self) -> dict:
+        """
+        Parse parameter list: param1=value1 param2=value2 ...
+        Stops when it hits 'as' or end of tokens
+        """
+        params = {}
+
+        while self.current_token() and not self.match(TokenType.AS, TokenType.EOF):
+            # Parameter name (identifier or keyword)
+            param_token = self.current_token()
+            if not param_token:
+                break
+
+            # Check if this is a parameter keyword
+            if param_token.type == TokenType.IDENTIFIER:
+                param_name = param_token.value
+            elif param_token.type in [TokenType.DELIMITER, TokenType.ENCODING, TokenType.HEADER,
+                                     TokenType.NAMES, TokenType.USECOLS, TokenType.DTYPE,
+                                     TokenType.SKIPROWS, TokenType.NROWS, TokenType.NA_VALUES,
+                                     TokenType.THOUSANDS, TokenType.DECIMAL, TokenType.COMMENT,
+                                     TokenType.SKIP_BLANK_LINES, TokenType.PARSE_DATES,
+                                     TokenType.DATE_FORMAT, TokenType.CHUNKSIZE, TokenType.COMPRESSION,
+                                     TokenType.LOW_MEMORY, TokenType.MEMORY_MAP, TokenType.ORIENT,
+                                     TokenType.TYP, TokenType.CONVERT_AXES, TokenType.CONVERT_DATES,
+                                     TokenType.PRECISE_FLOAT, TokenType.DATE_UNIT, TokenType.LINES,
+                                     TokenType.SHEET, TokenType.SHEET_NAME, TokenType.INDEX_COL,
+                                     TokenType.ENGINE, TokenType.CONVERTERS, TokenType.SKIPFOOTER,
+                                     TokenType.FILTERS, TokenType.USE_NULLABLE_DTYPES,
+                                     TokenType.STORAGE_OPTIONS, TokenType.PARAMS, TokenType.COERCE_FLOAT,
+                                     TokenType.INDEX, TokenType.INDEX_LABEL, TokenType.NA_REP,
+                                     TokenType.MODE, TokenType.QUOTING, TokenType.QUOTECHAR,
+                                     TokenType.ESCAPECHAR, TokenType.LINETERMINATOR, TokenType.FLOAT_FORMAT]:
+                param_name = param_token.value
+            else:
+                # Not a parameter, stop parsing
+                break
+
+            self.advance()
+
+            # Expect '='
+            if not self.match(TokenType.ASSIGN):
+                raise SyntaxError(f"Expected '=' after parameter '{param_name}'")
+            self.advance()
+
+            # Parse value
+            value = self.parse_value()
+            params[param_name] = value
+
+        return params
+
+    def parse_value(self):
+        """
+        Parse a value: string, number, boolean, list, dict, or identifier
+        """
+        token = self.current_token()
+        if not token:
+            raise SyntaxError("Expected value")
+
+        # String literal
+        if token.type == TokenType.STRING_LITERAL:
+            value = token.value
+            self.advance()
+            return value
+
+        # Numeric literal
+        elif token.type == TokenType.NUMERIC_LITERAL:
+            value = token.value
+            self.advance()
+            return value
+
+        # Boolean
+        elif token.type == TokenType.IDENTIFIER and token.value.lower() in ['true', 'false']:
+            value = token.value.lower() == 'true'
+            self.advance()
+            return value
+
+        # None/null
+        elif token.type == TokenType.IDENTIFIER and token.value.lower() in ['none', 'null']:
+            self.advance()
+            return None
+
+        # List
+        elif token.type == TokenType.LBRACKET:
+            return self.parse_list_value()
+
+        # Dict
+        elif token.type == TokenType.LBRACE:
+            return self.parse_dict_value()
+
+        # Identifier (for column names, etc.)
+        elif token.type == TokenType.IDENTIFIER:
+            value = token.value
+            self.advance()
+            return value
+
+        else:
+            raise SyntaxError(f"Unexpected token type for value: {token.type}")
+
+    def parse_list_value(self) -> list:
+        """Parse a list: [val1, val2, val3]"""
+        self.expect(TokenType.LBRACKET)
+        values = []
+
+        # Handle empty list
+        if self.match(TokenType.RBRACKET):
+            self.advance()
+            return values
+
+        # Parse first value
+        values.append(self.parse_value())
+
+        # Parse additional values
+        while self.match(TokenType.COMMA):
+            self.advance()
+            # Allow trailing comma
+            if self.match(TokenType.RBRACKET):
+                break
+            values.append(self.parse_value())
+
+        self.expect(TokenType.RBRACKET)
+        return values
+
+    def parse_dict_value(self) -> dict:
+        """Parse a dictionary: {key1: val1, key2: val2}"""
+        self.expect(TokenType.LBRACE)
+        result = {}
+
+        # Handle empty dict
+        if self.match(TokenType.RBRACE):
+            self.advance()
+            return result
+
+        # Parse first key-value pair
+        key = self.expect(TokenType.STRING_LITERAL).value if self.match(TokenType.STRING_LITERAL) else self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLON)
+        value = self.parse_value()
+        result[key] = value
+
+        # Parse additional key-value pairs
+        while self.match(TokenType.COMMA):
+            self.advance()
+            # Allow trailing comma
+            if self.match(TokenType.RBRACE):
+                break
+            key = self.expect(TokenType.STRING_LITERAL).value if self.match(TokenType.STRING_LITERAL) else self.expect(TokenType.IDENTIFIER).value
+            self.expect(TokenType.COLON)
+            value = self.parse_value()
+            result[key] = value
+
+        self.expect(TokenType.RBRACE)
+        return result

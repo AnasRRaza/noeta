@@ -1,0 +1,23 @@
+# Phase 3 Test: Filtering Operations
+# Tests all new filtering operations
+
+# Load test data
+load csv "data/sales_data.csv" as sales
+
+# Test 1: FILTER_BETWEEN - Filter rows where price is between 50 and 300
+filter_between sales with column="price" min=50 max=300 as mid_price
+
+# Test 2: FILTER_ISIN - Filter rows where category is in list
+filter_isin sales with column="category" values=["Electronics", "Furniture"] as selected_categories
+
+# Test 3: FILTER_CONTAINS - Filter product_ids containing "P"
+filter_contains sales with column="product_id" pattern="P" as products_with_p
+
+# Test 4: FILTER_STARTSWITH - Filter product_ids starting with "P0"
+filter_startswith sales with column="product_id" pattern="P0" as products_p0
+
+# Test 5: FILTER_NOTNULL - Filter rows where discount is not null (all rows in this dataset)
+filter_notnull sales with column="discount" as has_discount_field
+
+# Test 6: Show results
+describe mid_price

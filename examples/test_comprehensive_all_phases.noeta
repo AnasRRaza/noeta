@@ -1,0 +1,73 @@
+# Comprehensive Test: All Implemented Operations (Phases 1-3)
+# This test demonstrates all 23 operations across data I/O, selection, and filtering
+
+# ============================================================
+# PHASE 1: DATA I/O OPERATIONS
+# ============================================================
+
+# Test 1: Load CSV with multiple parameters
+load csv "data/sales_data.csv" with delimiter="," encoding="utf-8" header=0 as sales
+
+# Test 2: Basic info about loaded data
+info sales
+
+# ============================================================
+# PHASE 2: SELECTION & PROJECTION OPERATIONS
+# ============================================================
+
+# Test 3: Select only numeric columns
+select_by_type sales with type="numeric" as numeric_only
+
+# Test 4: Get first 5 rows
+head sales with n=5 as first_five
+
+# Test 5: Get last 3 rows
+tail sales with n=3 as last_three
+
+# Test 6: Position-based indexing - rows 5 to 10
+iloc sales with rows=[5,10] as rows_5_to_10
+
+# Test 7: Rename columns for clarity
+rename sales with mapping={"product_id": "id", "customer_id": "customer"} as sales_renamed
+
+# Test 8: Reorder columns - date first
+reorder sales with order=["date", "product_id", "price", "quantity"] as sales_reordered
+
+# ============================================================
+# PHASE 3: FILTERING OPERATIONS
+# ============================================================
+
+# Test 9: Filter prices between 50 and 300
+filter_between sales with column="price" min=50 max=300 as mid_price_range
+
+# Test 10: Filter specific categories
+filter_isin sales with column="category" values=["Electronics", "Furniture"] as selected_cats
+
+# Test 11: Filter products containing "P"
+filter_contains sales with column="product_id" pattern="P" as products_with_p
+
+# Test 12: Filter products starting with "P0"
+filter_startswith sales with column="product_id" pattern="P0" as products_p0
+
+# Test 13: Filter non-null discount values (all rows in this dataset)
+filter_notnull sales with column="discount" as has_discount
+
+# ============================================================
+# COMBINED WORKFLOW DEMONSTRATION
+# ============================================================
+
+# Complex workflow: Load → Filter → Select → Analyze
+load csv "data/sales_data.csv" as raw_sales
+filter_between raw_sales with column="price" min=100 max=500 as premium_products
+head premium_products with n=10 as top_premium
+describe top_premium
+
+# ============================================================
+# SAVE OPERATIONS
+# ============================================================
+
+# Test 14: Save filtered results to new CSV
+save mid_price_range to "output/filtered_mid_price.csv" with index=false encoding="utf-8"
+
+# Final summary
+summary sales

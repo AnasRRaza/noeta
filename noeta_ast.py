@@ -20,6 +20,108 @@ class LoadNode(ASTNode):
     file_path: str
     alias: str
 
+# Enhanced Load Nodes with parameters
+@dataclass
+class LoadCSVNode(ASTNode):
+    filepath: str
+    params: dict  # All optional parameters
+    alias: str
+
+@dataclass
+class LoadJSONNode(ASTNode):
+    filepath: str
+    params: dict
+    alias: str
+
+@dataclass
+class LoadExcelNode(ASTNode):
+    filepath: str
+    params: dict
+    alias: str
+
+@dataclass
+class LoadParquetNode(ASTNode):
+    filepath: str
+    params: dict
+    alias: str
+
+@dataclass
+class LoadSQLNode(ASTNode):
+    query: str
+    connection: str
+    params: dict
+    alias: str
+
+# Enhanced Save Nodes
+@dataclass
+class SaveCSVNode(ASTNode):
+    source_alias: str
+    filepath: str
+    params: dict
+
+@dataclass
+class SaveJSONNode(ASTNode):
+    source_alias: str
+    filepath: str
+    params: dict
+
+@dataclass
+class SaveExcelNode(ASTNode):
+    source_alias: str
+    filepath: str
+    params: dict
+
+@dataclass
+class SaveParquetNode(ASTNode):
+    source_alias: str
+    filepath: str
+    params: dict
+
+# Phase 2: Selection & Projection Nodes
+@dataclass
+class SelectByTypeNode(ASTNode):
+    source_alias: str
+    dtype: str  # 'numeric', 'string', 'datetime', etc.
+    new_alias: str
+
+@dataclass
+class HeadNode(ASTNode):
+    source_alias: str
+    n_rows: int
+    new_alias: str
+
+@dataclass
+class TailNode(ASTNode):
+    source_alias: str
+    n_rows: int
+    new_alias: str
+
+@dataclass
+class ILocNode(ASTNode):
+    source_alias: str
+    row_slice: tuple  # (start, end) or single int
+    col_slice: Optional[tuple]  # Optional column selection
+    new_alias: str
+
+@dataclass
+class LocNode(ASTNode):
+    source_alias: str
+    row_labels: Any  # Can be list, slice, or single label
+    col_labels: Optional[List[str]]  # Optional column selection
+    new_alias: str
+
+@dataclass
+class RenameColumnsNode(ASTNode):
+    source_alias: str
+    mapping: dict  # old_name -> new_name mapping
+    new_alias: str
+
+@dataclass
+class ReorderColumnsNode(ASTNode):
+    source_alias: str
+    column_order: List[str]
+    new_alias: str
+
 @dataclass
 class SelectNode(ASTNode):
     source_alias: str
@@ -30,6 +132,69 @@ class SelectNode(ASTNode):
 class FilterNode(ASTNode):
     source_alias: str
     condition: 'ConditionNode'
+    new_alias: str
+
+# Phase 3: Filtering Nodes
+@dataclass
+class FilterBetweenNode(ASTNode):
+    source_alias: str
+    column: str
+    min_value: Any
+    max_value: Any
+    new_alias: str
+
+@dataclass
+class FilterIsInNode(ASTNode):
+    source_alias: str
+    column: str
+    values: List[Any]
+    new_alias: str
+
+@dataclass
+class FilterContainsNode(ASTNode):
+    source_alias: str
+    column: str
+    pattern: str
+    new_alias: str
+
+@dataclass
+class FilterStartsWithNode(ASTNode):
+    source_alias: str
+    column: str
+    pattern: str
+    new_alias: str
+
+@dataclass
+class FilterEndsWithNode(ASTNode):
+    source_alias: str
+    column: str
+    pattern: str
+    new_alias: str
+
+@dataclass
+class FilterRegexNode(ASTNode):
+    source_alias: str
+    column: str
+    pattern: str
+    new_alias: str
+
+@dataclass
+class FilterNullNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class FilterNotNullNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class FilterDuplicatesNode(ASTNode):
+    source_alias: str
+    subset: Optional[List[str]]  # Columns to consider for duplicates
+    keep: str  # 'first', 'last', or False
     new_alias: str
 
 @dataclass

@@ -1,0 +1,14 @@
+# Test Phase 1: Enhanced Data I/O Operations
+# This script tests the new enhanced load and save operations with parameters
+
+# Test 1: Load CSV with basic parameters
+load csv "data/sales_data.csv" as sales_basic
+
+# Test 2: Load CSV with multiple parameters
+load csv "data/sales_data.csv" with delimiter="," encoding="utf-8" header=0 as sales_full
+
+# Test 3: Describe the loaded data
+describe sales_full
+
+# Test 4: Save CSV with parameters
+save sales_full to "output/sales_test.csv" with index=false encoding="utf-8"
