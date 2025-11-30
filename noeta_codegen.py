@@ -103,11 +103,12 @@ class CodeGenerator:
     def visit_SortNode(self, node: SortNode):
         columns = [spec.column_name for spec in node.sort_specs]
         ascending = [spec.direction == 'ASC' for spec in node.sort_specs]
-        
+
         code = f"{node.new_alias} = {node.source_alias}.sort_values("
         code += f"by={columns}, ascending={ascending}).copy()"
         self.code_lines.append(code)
-        self.code_lines.append(f"print('Sorted {node.source_alias} by {columns}')")
+        columns_str = ", ".join([f"'{col}'" for col in columns])
+        self.code_lines.append(f"print(f\"Sorted {node.source_alias} by [{columns_str}]\")")
     
     def visit_JoinNode(self, node: JoinNode):
         code = f"{node.new_alias} = pd.merge({node.alias1}, {node.alias2}, "
@@ -116,34 +117,42 @@ class CodeGenerator:
         self.code_lines.append(f"print(f'Joined {node.alias1} and {node.alias2}: {{len({node.new_alias})}} rows')")
     
     def visit_GroupByNode(self, node: GroupByNode):
-        agg_dict = {}
-        for agg in node.aggregations:
-            func = agg.function_name
-            # Map common aggregation names
-            func_map = {
-                'avg': 'mean',
-                'count': 'count',
-                'sum': 'sum',
-                'min': 'min',
-                'max': 'max',
-                'mean': 'mean',
-                'std': 'std'
-            }
-            func = func_map.get(func, func)
-            
-            if agg.column_name not in agg_dict:
-                agg_dict[agg.column_name] = []
-            agg_dict[agg.column_name].append(func)
-        
-        code = f"{node.new_alias} = {node.source_alias}.groupby({node.group_columns}).agg("
-        code += str(agg_dict) + ").reset_index()"
-        
-        # Flatten column names if needed
-        code += f"\n{node.new_alias}.columns = ['_'.join(col).strip('_') if isinstance(col, tuple) else col for col in {node.new_alias}.columns]"
-        
-        self.code_lines.append(code)
-        group_cols_str = ", ".join([f"'{col}'" for col in node.group_columns])
-        self.code_lines.append(f"print(f\"Grouped by [{group_cols_str}]: {{len({node.new_alias})}} groups\")")
+        if node.aggregations:
+            # Classic syntax with aggregations
+            agg_dict = {}
+            for agg in node.aggregations:
+                func = agg.function_name
+                # Map common aggregation names
+                func_map = {
+                    'avg': 'mean',
+                    'count': 'count',
+                    'sum': 'sum',
+                    'min': 'min',
+                    'max': 'max',
+                    'mean': 'mean',
+                    'std': 'std'
+                }
+                func = func_map.get(func, func)
+
+                if agg.column_name not in agg_dict:
+                    agg_dict[agg.column_name] = []
+                agg_dict[agg.column_name].append(func)
+
+            code = f"{node.new_alias} = {node.source_alias}.groupby({node.group_columns}).agg("
+            code += str(agg_dict) + ").reset_index()"
+
+            # Flatten column names if needed
+            code += f"\n{node.new_alias}.columns = ['_'.join(col).strip('_') if isinstance(col, tuple) else col for col in {node.new_alias}.columns]"
+
+            self.code_lines.append(code)
+            group_cols_str = ", ".join([f"'{col}'" for col in node.group_columns])
+            self.code_lines.append(f"print(f\"Grouped by [{group_cols_str}]: {{len({node.new_alias})}} groups\")")
+        else:
+            # Natural syntax without aggregations - return grouped counts
+            code = f"{node.new_alias} = {node.source_alias}.groupby({node.group_columns}).size().reset_index(name='count')"
+            self.code_lines.append(code)
+            group_cols_str = ", ".join([f"'{col}'" for col in node.group_columns])
+            self.code_lines.append(f"print(f\"Grouped by [{group_cols_str}]: {{len({node.new_alias})}} groups\")")
 
     
     def visit_SampleNode(self, node: SampleNode):
@@ -315,10 +324,22 @@ class CodeGenerator:
     def visit_BoxPlotNode(self, node: BoxPlotNode):
         code = f"# Box plot\n"
         code += f"plt.figure(figsize=(10, 6))\n"
-        code += f"{node.source_alias}[{node.columns}].boxplot()\n"
+
+        if node.columns:
+            # Classic syntax: multiple columns
+            code += f"{node.source_alias}[{node.columns}].boxplot()\n"
+        elif node.value_column and node.group_column:
+            # Natural syntax: value by group
+            code += f"{node.source_alias}.boxplot(column='{node.value_column}', by='{node.group_column}')\n"
+        elif node.value_column:
+            # Natural syntax: single value column
+            code += f"{node.source_alias}[['{node.value_column}']].boxplot()\n"
+        else:
+            raise ValueError("BoxPlot requires either columns or value_column")
+
         code += f"plt.title('Box Plot')\n"
         code += f"plt.xticks(rotation=45)\n"
-        
+
         self.code_lines.append(code)
         self.last_plot = True
     

@@ -64,7 +64,9 @@ class TokenType(Enum):
     WIDTH = auto()
     HEIGHT = auto()
     DESC = auto()
-    
+    WHERE = auto()  # Natural language filter syntax
+    ASC = auto()    # Sort ascending direction
+
     # Literals
     STRING_LITERAL = auto()
     NUMERIC_LITERAL = auto()
@@ -168,6 +170,8 @@ class Lexer:
             'width': TokenType.WIDTH,
             'height': TokenType.HEIGHT,
             'desc': TokenType.DESC,
+            'where': TokenType.WHERE,
+            'asc': TokenType.ASC,
         }
     
     def current_char(self) -> Optional[str]:

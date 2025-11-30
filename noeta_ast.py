@@ -144,7 +144,9 @@ class HypothesisNode(ASTNode):
 @dataclass
 class BoxPlotNode(ASTNode):
     source_alias: str
-    columns: List[str]
+    columns: Optional[List[str]] = None      # Classic syntax
+    value_column: Optional[str] = None       # Natural syntax
+    group_column: Optional[str] = None       # Natural syntax grouping
 
 @dataclass
 class HeatmapNode(ASTNode):

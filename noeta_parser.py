@@ -121,19 +121,51 @@ class Parser:
         return LoadNode(file_path, alias)
     
     def parse_select(self) -> SelectNode:
+        """
+        Supports:
+        - Classic: select df {col1, col2} as alias
+        - Natural: select df with col1, col2 as alias
+        """
         self.expect(TokenType.SELECT)
         source = self.expect(TokenType.IDENTIFIER).value
-        columns = self.parse_column_list()
+
+        # Detect syntax variant
+        if self.match(TokenType.WITH):
+            # Natural syntax
+            self.advance()
+            columns = self.parse_column_list_natural()
+        elif self.match(TokenType.LBRACE):
+            # Classic syntax
+            columns = self.parse_column_list()
+        else:
+            raise SyntaxError(f"Expected 'with' or '{{' after select source")
+
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return SelectNode(source, columns, new_alias)
     
     def parse_filter(self) -> FilterNode:
+        """
+        Supports:
+        - Classic: filter df [col == val] as alias
+        - Natural: filter df where col = val as alias
+        """
         self.expect(TokenType.FILTER)
         source = self.expect(TokenType.IDENTIFIER).value
-        self.expect(TokenType.LBRACKET)
-        condition = self.parse_condition()
-        self.expect(TokenType.RBRACKET)
+
+        # Detect syntax variant
+        if self.match(TokenType.WHERE):
+            # Natural syntax
+            self.advance()
+            condition = self.parse_condition_natural()
+        elif self.match(TokenType.LBRACKET):
+            # Classic syntax
+            self.advance()
+            condition = self.parse_condition()
+            self.expect(TokenType.RBRACKET)
+        else:
+            raise SyntaxError(f"Expected 'where' or '[' after filter source at {self.current_token()}")
+
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return FilterNode(source, condition, new_alias)
@@ -162,14 +194,35 @@ class Parser:
         return JoinNode(alias1, alias2, join_column, new_alias)
     
     def parse_groupby(self) -> GroupByNode:
+        """
+        Supports:
+        - Classic: groupby df by: {cols} agg: {funcs} as alias
+        - Natural: groupby df by col as alias (no aggregation)
+        - Natural: groupby df by col1, col2 as alias
+        """
         self.expect(TokenType.GROUPBY)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.BY)
-        self.expect(TokenType.COLON)
-        group_columns = self.parse_column_list()
-        self.expect(TokenType.AGG)
-        self.expect(TokenType.COLON)
-        aggregations = self.parse_aggregations()
+
+        # Detect syntax variant
+        if self.match(TokenType.COLON):
+            # Classic syntax: by: {cols}
+            self.advance()
+            group_columns = self.parse_column_list()
+            self.expect(TokenType.AGG)
+            self.expect(TokenType.COLON)
+            aggregations = self.parse_aggregations()
+        else:
+            # Natural syntax: by col or by col1, col2
+            group_columns = self.parse_column_list_natural()
+
+            # Aggregation is optional
+            aggregations = []
+            if self.match(TokenType.AGG):
+                self.advance()
+                self.expect(TokenType.COLON)
+                aggregations = self.parse_aggregations()
+
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return GroupByNode(source, group_columns, aggregations, new_alias)
@@ -379,12 +432,37 @@ class Parser:
         return HypothesisNode(alias1, alias2, columns, test_type)
     
     def parse_boxplot(self) -> BoxPlotNode:
+        """
+        Supports:
+        - Classic: boxplot df columns: {col1, col2}
+        - Natural: boxplot df with col by group_col
+        """
         self.expect(TokenType.BOXPLOT)
         source = self.expect(TokenType.IDENTIFIER).value
-        self.expect(TokenType.COLUMNS)
-        self.expect(TokenType.COLON)
-        columns = self.parse_column_list()
-        return BoxPlotNode(source, columns)
+
+        columns = None
+        value_column = None
+        group_column = None
+
+        # Detect syntax variant
+        if self.match(TokenType.WITH):
+            # Natural syntax: boxplot df with Age by Pclass
+            self.advance()
+            value_column = self.expect(TokenType.IDENTIFIER).value
+
+            # Optional BY clause
+            if self.match(TokenType.BY):
+                self.advance()
+                group_column = self.expect(TokenType.IDENTIFIER).value
+        elif self.match(TokenType.COLUMNS):
+            # Classic syntax: boxplot df columns: {cols}
+            self.advance()
+            self.expect(TokenType.COLON)
+            columns = self.parse_column_list()
+        else:
+            raise SyntaxError(f"Expected 'with' or 'columns' after boxplot source")
+
+        return BoxPlotNode(source, columns, value_column, group_column)
     
     def parse_heatmap(self) -> HeatmapNode:
         self.expect(TokenType.HEATMAP)
@@ -464,19 +542,63 @@ class Parser:
             columns.append(self.expect(TokenType.IDENTIFIER).value)
         self.expect(TokenType.RBRACE)
         return columns
-    
+
+    def parse_column_list_natural(self) -> List[str]:
+        """Parse comma-separated columns without braces"""
+        columns = []
+        columns.append(self.expect(TokenType.IDENTIFIER).value)
+
+        while self.match(TokenType.COMMA):
+            self.advance()
+            columns.append(self.expect(TokenType.IDENTIFIER).value)
+
+        return columns
+
+    def parse_condition_natural(self) -> ConditionNode:
+        """Parse condition without brackets, accepting = or =="""
+        left = self.expect(TokenType.IDENTIFIER).value
+
+        # Accept both ASSIGN (=) and comparison operators
+        op_token = self.current_token()
+        if op_token.type == TokenType.ASSIGN:
+            operator = '=='  # Convert single = to ==
+            self.advance()
+        elif op_token.type in [TokenType.EQ, TokenType.NEQ, TokenType.LT,
+                               TokenType.GT, TokenType.LTE, TokenType.GTE]:
+            operator = op_token.value
+            self.advance()
+        else:
+            raise SyntaxError(f"Expected comparison operator, got {op_token.type}")
+
+        # Parse right operand
+        right_token = self.current_token()
+        if right_token.type == TokenType.IDENTIFIER:
+            right = right_token.value
+        elif right_token.type == TokenType.STRING_LITERAL:
+            right = right_token.value
+        elif right_token.type == TokenType.NUMERIC_LITERAL:
+            right = right_token.value
+        else:
+            raise SyntaxError(f"Expected identifier or literal")
+        self.advance()
+
+        return ConditionNode(left, operator, right)
+
     def parse_condition(self) -> ConditionNode:
         left = self.expect(TokenType.IDENTIFIER).value
-        
-        # Parse operator
+
+        # Parse operator - accept both = and ==
         op_token = self.current_token()
-        if op_token.type in [TokenType.EQ, TokenType.NEQ, TokenType.LT, 
+        if op_token.type == TokenType.ASSIGN:
+            operator = '=='  # Convert single = to ==
+            self.advance()
+        elif op_token.type in [TokenType.EQ, TokenType.NEQ, TokenType.LT,
                              TokenType.GT, TokenType.LTE, TokenType.GTE]:
             operator = op_token.value
             self.advance()
         else:
             raise SyntaxError(f"Expected comparison operator, got {op_token.type}")
-        
+
         # Parse right operand (can be identifier, string, or number)
         right_token = self.current_token()
         if right_token.type == TokenType.IDENTIFIER:
@@ -488,7 +610,7 @@ class Parser:
         else:
             raise SyntaxError(f"Expected identifier or literal, got {right_token.type}")
         self.advance()
-        
+
         return ConditionNode(left, operator, right)
     
     def parse_sort_specs(self) -> List[SortSpecNode]:
@@ -499,8 +621,11 @@ class Parser:
         if self.match(TokenType.DESC):
             direction = 'DESC'
             self.advance()
+        elif self.match(TokenType.ASC):
+            direction = 'ASC'
+            self.advance()
         specs.append(SortSpecNode(column, direction))
-        
+
         # Parse additional sort specs
         while self.match(TokenType.COMMA):
             self.advance()
@@ -508,6 +633,9 @@ class Parser:
             direction = 'ASC'
             if self.match(TokenType.DESC):
                 direction = 'DESC'
+                self.advance()
+            elif self.match(TokenType.ASC):
+                direction = 'ASC'
                 self.advance()
             specs.append(SortSpecNode(column, direction))
         
