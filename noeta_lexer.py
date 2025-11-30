@@ -103,6 +103,7 @@ class TokenType(Enum):
     DUPLICATED = auto()
     COUNT_DUPLICATES = auto()
     DROP_DUPLICATES = auto()
+    QCUT = auto()  # Quantile-based binning
 
     # Phase 6: Data Ordering operations
     SORT_INDEX = auto()
@@ -427,6 +428,7 @@ class Lexer:
             'duplicated': TokenType.DUPLICATED,
             'count_duplicates': TokenType.COUNT_DUPLICATES,
             'drop_duplicates': TokenType.DROP_DUPLICATES,
+            'qcut': TokenType.QCUT,
 
             # Phase 6: Data Ordering operations
             'sort_index': TokenType.SORT_INDEX,

@@ -1085,6 +1085,35 @@ class CodeGenerator:
             code += f"print({node.source_alias}.duplicated().sum())"
         self.code_lines.append(code)
 
+    def visit_DropDuplicatesNode(self, node):
+        """Generate: df = df.drop_duplicates(subset=[...], keep='first')"""
+        if node.subset:
+            code = f"{node.new_alias} = {node.source_alias}.drop_duplicates(subset={node.subset}, keep='{node.keep}').reset_index(drop=True)\n"
+        else:
+            code = f"{node.new_alias} = {node.source_alias}.drop_duplicates(keep='{node.keep}').reset_index(drop=True)\n"
+        code += f"print(f'Removed duplicates: {{len({node.source_alias}) - len({node.new_alias})}} rows removed')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FillModeNode(self, node):
+        """Generate: df['col'] = df['col'].fillna(df['col'].mode()[0])"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}'] = {node.source_alias}['{node.column}'].fillna({node.source_alias}['{node.column}'].mode()[0])\n"
+        code += f"print(f'Filled {node.column} with mode value')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_QcutNode(self, node):
+        """Generate: df['col_qcut'] = pd.qcut(df['col'], q=4, labels=[...])"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.labels:
+            code += f"{node.new_alias}['{node.column}_qcut'] = pd.qcut({node.source_alias}['{node.column}'], q={node.q}, labels={node.labels})\n"
+        else:
+            code += f"{node.new_alias}['{node.column}_qcut'] = pd.qcut({node.source_alias}['{node.column}'], q={node.q})\n"
+        code += f"print(f'Created {node.q} quantile bins for {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
     # ============================================================
     # PHASE 6: DATA ORDERING OPERATIONS - CODE GENERATORS
     # ============================================================

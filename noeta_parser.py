@@ -187,6 +187,12 @@ class Parser:
             return self.parse_duplicated()
         elif token.type == TokenType.COUNT_DUPLICATES:
             return self.parse_count_duplicates()
+        elif token.type == TokenType.DROP_DUPLICATES:
+            return self.parse_drop_duplicates()
+        elif token.type == TokenType.FILL_MODE:
+            return self.parse_fill_mode()
+        elif token.type == TokenType.QCUT:
+            return self.parse_qcut()
 
         # Phase 6: Data Ordering operations
         elif token.type == TokenType.SORT_INDEX:
@@ -2040,6 +2046,61 @@ class Parser:
             columns = self.parse_list_value()
 
         return CountDuplicatesNode(source, columns)
+
+    def parse_drop_duplicates(self) -> 'DropDuplicatesNode':
+        """Parse: drop_duplicates data subset=["col1", "col2"] keep="first" as deduped"""
+        from noeta_ast import DropDuplicatesNode
+        self.advance()  # consume DROP_DUPLICATES
+        source = self.expect(TokenType.IDENTIFIER).value
+
+        subset = None
+        keep = "first"
+
+        if self.match(TokenType.SUBSET):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            subset = self.parse_list_value()
+
+        if self.match(TokenType.KEEP):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            keep = self.expect(TokenType.STRING_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return DropDuplicatesNode(source, new_alias, subset, keep)
+
+    def parse_fill_mode(self) -> 'FillModeNode':
+        """Parse: fill_mode data column category as filled"""
+        from noeta_ast import FillModeNode
+        self.advance()  # consume FILL_MODE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FillModeNode(source, column, new_alias)
+
+    def parse_qcut(self) -> 'QcutNode':
+        """Parse: qcut data column price q=4 labels=["Q1","Q2","Q3","Q4"] as quantiled"""
+        from noeta_ast import QcutNode
+        self.advance()  # consume QCUT
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.Q)
+        self.expect(TokenType.ASSIGN)
+        q = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+        labels = None
+        if self.match(TokenType.LABELS):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            labels = self.parse_list_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return QcutNode(source, column, q, new_alias, labels)
 
     # ============================================================
     # PHASE 6: DATA ORDERING OPERATIONS - PARSERS

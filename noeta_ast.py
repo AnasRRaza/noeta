@@ -616,6 +616,27 @@ class CountDuplicatesNode(ASTNode):
     source_alias: str
     columns: Optional[List[str]] = None
 
+@dataclass
+class DropDuplicatesNode(ASTNode):
+    source_alias: str
+    new_alias: str
+    subset: Optional[List[str]] = None
+    keep: str = "first"  # "first", "last", False
+
+@dataclass
+class FillModeNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class QcutNode(ASTNode):
+    source_alias: str
+    column: str
+    q: int  # Number of quantiles
+    new_alias: str
+    labels: Optional[List[str]] = None
+
 # ============================================================
 # PHASE 6: DATA ORDERING OPERATIONS
 # ============================================================

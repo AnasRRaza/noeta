@@ -74,8 +74,22 @@ reset_index indexed_by_product drop=false as reset_sales
 # Test assign - Assign constant value to new column
 assign sales column status value="active" as with_status
 
+# ============================================================
+# ADDITIONAL MISSING OPERATIONS ADDED
+# ============================================================
+
+# Test drop_duplicates - Remove duplicate rows
+drop_duplicates sales keep="first" as deduped_sales
+
+# Test fill_mode - Fill with mode value  
+fill_mode sales column category as mode_filled_data
+
+# Test qcut - Quantile-based binning
+qcut sales column price q=4 as quantiled_data
+
 # Display some results to verify
 describe ranked_sales
 describe mean_roll
 describe combined_v
+describe deduped_sales
 
