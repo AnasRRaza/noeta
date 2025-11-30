@@ -1,0 +1,21 @@
+# Simple Titanic Analysis - Quick Demo
+
+# Load the dataset
+load "titanic.csv" as titanic
+
+# Basic exploration
+info titanic
+describe titanic
+
+# Clean missing values
+fillna titanic with Age = 30 as clean_data
+
+# Analyze survivors
+filter clean_data where Survived = 1 as survivors
+summary survivors
+
+# Group by gender to see survival patterns
+groupby clean_data by Sex as by_gender
+
+# Visualize age distribution by class
+boxplot clean_data with Age by Pclass

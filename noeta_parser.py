@@ -203,25 +203,46 @@ class Parser:
     def parse_fillna(self) -> FillNANode:
         self.expect(TokenType.FILLNA)
         source = self.expect(TokenType.IDENTIFIER).value
-        self.expect(TokenType.VALUE)
-        self.expect(TokenType.COLON)
-        
-        # Parse fill value (can be string or numeric)
-        token = self.current_token()
-        if token.type == TokenType.STRING_LITERAL:
-            fill_value = token.value
-        elif token.type == TokenType.NUMERIC_LITERAL:
-            fill_value = token.value
-        else:
-            raise SyntaxError(f"Expected literal value, got {token.type}")
-        self.advance()
-        
-        columns = None
-        if self.match(TokenType.COLUMNS):
+
+        # Check if using WITH syntax or VALUE syntax
+        if self.match(TokenType.WITH):
+            # New syntax: fillna df with col = value
             self.advance()
+            column_name = self.expect(TokenType.IDENTIFIER).value
+            self.expect(TokenType.ASSIGN)
+
+            # Parse fill value (can be string or numeric)
+            token = self.current_token()
+            if token.type == TokenType.STRING_LITERAL:
+                fill_value = token.value
+            elif token.type == TokenType.NUMERIC_LITERAL:
+                fill_value = token.value
+            else:
+                raise SyntaxError(f"Expected literal value, got {token.type}")
+            self.advance()
+
+            columns = [column_name]  # Single column specified
+        else:
+            # Old syntax: fillna df value: X columns: {col}
+            self.expect(TokenType.VALUE)
             self.expect(TokenType.COLON)
-            columns = self.parse_column_list()
-        
+
+            # Parse fill value (can be string or numeric)
+            token = self.current_token()
+            if token.type == TokenType.STRING_LITERAL:
+                fill_value = token.value
+            elif token.type == TokenType.NUMERIC_LITERAL:
+                fill_value = token.value
+            else:
+                raise SyntaxError(f"Expected literal value, got {token.type}")
+            self.advance()
+
+            columns = None
+            if self.match(TokenType.COLUMNS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                columns = self.parse_column_list()
+
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return FillNANode(source, fill_value, columns, new_alias)
@@ -229,7 +250,13 @@ class Parser:
     def parse_mutate(self) -> MutateNode:
         self.expect(TokenType.MUTATE)
         source = self.expect(TokenType.IDENTIFIER).value
-        mutations = self.parse_mutations()
+
+        # Check if using WITH syntax or brace syntax
+        if self.match(TokenType.WITH):
+            mutations = self.parse_mutations_with_syntax()
+        else:
+            mutations = self.parse_mutations()
+
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return MutateNode(source, mutations, new_alias)
@@ -527,3 +554,55 @@ class Parser:
         
         self.expect(TokenType.RBRACE)
         return mutations
+
+    def parse_mutations_with_syntax(self) -> List[MutationNode]:
+        """Parse mutations using WITH keyword syntax: WITH col = expr [WITH col = expr ...]"""
+        mutations = []
+
+        # Parse first mutation: WITH col = expr
+        self.expect(TokenType.WITH)
+        new_column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.ASSIGN)
+        expression = self.parse_expression()
+        mutations.append(MutationNode(new_column, expression))
+
+        # Parse additional mutations: WITH col = expr
+        while self.match(TokenType.WITH):
+            self.advance()
+            new_column = self.expect(TokenType.IDENTIFIER).value
+            self.expect(TokenType.ASSIGN)
+            expression = self.parse_expression()
+            mutations.append(MutationNode(new_column, expression))
+
+        return mutations
+
+    def parse_expression(self) -> str:
+        """Parse an expression and return it as a string for pandas eval()"""
+        expr_tokens = []
+
+        # Parse the expression until we hit AS keyword or WITH keyword
+        while not self.match(TokenType.AS, TokenType.WITH) and self.pos < len(self.tokens):
+            token = self.current_token()
+
+            if token.type == TokenType.IDENTIFIER:
+                expr_tokens.append(token.value)
+                self.advance()
+            elif token.type == TokenType.NUMERIC_LITERAL:
+                expr_tokens.append(str(token.value))
+                self.advance()
+            elif token.type == TokenType.STRING_LITERAL:
+                expr_tokens.append(f'"{token.value}"')
+                self.advance()
+            elif token.type in [TokenType.PLUS, TokenType.MINUS, TokenType.STAR,
+                               TokenType.SLASH, TokenType.PERCENT]:
+                expr_tokens.append(token.value)
+                self.advance()
+            elif token.type in [TokenType.EQ, TokenType.NEQ, TokenType.LT,
+                               TokenType.GT, TokenType.LTE, TokenType.GTE]:
+                expr_tokens.append(token.value)
+                self.advance()
+            else:
+                break
+
+        # Join tokens with spaces for readability
+        return ' '.join(expr_tokens)

@@ -77,6 +77,12 @@ class TokenType(Enum):
     GT = auto()  # >
     LTE = auto()  # <=
     GTE = auto()  # >=
+    ASSIGN = auto()  # =
+    PLUS = auto()  # +
+    MINUS = auto()  # -
+    STAR = auto()  # *
+    SLASH = auto()  # /
+    PERCENT = auto()  # %
     
     # Punctuation
     LBRACE = auto()  # {
@@ -288,11 +294,37 @@ class Lexer:
             if self.current_char() == '<':
                 self.advance()
                 return Token(TokenType.LT, '<', line, col)
-            
+
             if self.current_char() == '>':
                 self.advance()
                 return Token(TokenType.GT, '>', line, col)
-            
+
+            # Single = (assignment in mutate expressions)
+            if self.current_char() == '=':
+                self.advance()
+                return Token(TokenType.ASSIGN, '=', line, col)
+
+            # Arithmetic operators
+            if self.current_char() == '+':
+                self.advance()
+                return Token(TokenType.PLUS, '+', line, col)
+
+            if self.current_char() == '-':
+                self.advance()
+                return Token(TokenType.MINUS, '-', line, col)
+
+            if self.current_char() == '*':
+                self.advance()
+                return Token(TokenType.STAR, '*', line, col)
+
+            if self.current_char() == '/':
+                self.advance()
+                return Token(TokenType.SLASH, '/', line, col)
+
+            if self.current_char() == '%':
+                self.advance()
+                return Token(TokenType.PERCENT, '%', line, col)
+
             # Punctuation
             if self.current_char() == '{':
                 self.advance()
