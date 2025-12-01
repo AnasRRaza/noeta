@@ -1,0 +1,46 @@
+# Comprehensive test of all Phase 11 operations
+load csv "data/sales_data.csv" as sales
+
+# 1. Cumulative Operations (4)
+cumsum sales column quantity as test_cumsum
+cummax sales column price as test_cummax
+cummin sales column price as test_cummin
+cumprod sales column quantity as test_cumprod
+
+# 2. Time Series Operations (3)
+pct_change sales column price with periods=1 as test_pct_change
+diff sales column price with periods=1 as test_diff
+shift sales column quantity with periods=1 fill_value=0 as test_shift
+
+# 3. Apply/Map Operations (2)
+applymap sales function="lambda x: str(x).upper() if isinstance(x, str) else x" as test_applymap
+map_values sales column category mapping={"Electronics": 1, "Clothing": 2, "Furniture": 3} as test_map_values
+
+# 4. Date/Time Extraction (7)
+parse_datetime sales column date as sales_dated
+extract_hour sales_dated column date as test_hour
+extract_minute sales_dated column date as test_minute
+extract_second sales_dated column date as test_second
+extract_dayofweek sales_dated column date as test_dayofweek
+extract_dayofyear sales_dated column date as test_dayofyear
+extract_weekofyear sales_dated column date as test_weekofyear
+extract_quarter sales_dated column date as test_quarter
+
+# 5. Date Arithmetic (3)
+date_add sales_dated column date value=7 unit="days" as test_date_add
+date_subtract sales_dated column date value=30 unit="days" as test_date_subtract
+format_datetime sales_dated column date format="%Y-%m-%d" as test_format_datetime
+
+# 6. Advanced String Operations (6)
+extract_regex sales column product_code pattern="[A-Z]{2}[0-9]{3}" group=0 as test_extract_regex
+title sales column category as test_title
+capitalize sales column category as test_capitalize
+lstrip sales column category with chars=" " as test_lstrip
+rstrip sales column category with chars=" " as test_rstrip
+find sales column category substring="Electronics" as test_find
+
+# 7. Binning (1)
+cut sales column price bins=[0, 50, 100, 500, 1000] labels=["Budget", "Mid", "Premium", "Luxury"] as test_cut
+
+# Display summary
+describe test_cumsum

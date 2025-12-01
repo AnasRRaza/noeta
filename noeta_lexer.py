@@ -69,18 +69,34 @@ class TokenType(Enum):
     UPPER = auto()
     LOWER = auto()
     STRIP = auto()
+    LSTRIP = auto()
+    RSTRIP = auto()
+    TITLE = auto()
+    CAPITALIZE = auto()
     REPLACE = auto()
     SPLIT = auto()
     CONCAT = auto()
     SUBSTRING = auto()
     LENGTH = auto()
+    EXTRACT_REGEX = auto()
+    FIND = auto()
 
     # Phase 4: Transformation operations - Date
     PARSE_DATETIME = auto()
     EXTRACT_YEAR = auto()
     EXTRACT_MONTH = auto()
     EXTRACT_DAY = auto()
+    EXTRACT_HOUR = auto()
+    EXTRACT_MINUTE = auto()
+    EXTRACT_SECOND = auto()
+    EXTRACT_DAYOFWEEK = auto()
+    EXTRACT_DAYOFYEAR = auto()
+    EXTRACT_WEEKOFYEAR = auto()
+    EXTRACT_QUARTER = auto()
     DATE_DIFF = auto()
+    DATE_ADD = auto()
+    DATE_SUBTRACT = auto()
+    FORMAT_DATETIME = auto()
 
     # Phase 4: Transformation operations - Type/Encoding/Scaling
     ASTYPE = auto()
@@ -104,6 +120,7 @@ class TokenType(Enum):
     COUNT_DUPLICATES = auto()
     DROP_DUPLICATES = auto()
     QCUT = auto()  # Quantile-based binning
+    CUT = auto()  # Binning with explicit boundaries
 
     # Phase 6: Data Ordering operations
     SORT_INDEX = auto()
@@ -124,6 +141,17 @@ class TokenType(Enum):
     EXPANDING_SUM = auto()
     EXPANDING_MIN = auto()
     EXPANDING_MAX = auto()
+
+    # Cumulative operations
+    CUMSUM = auto()
+    CUMMAX = auto()
+    CUMMIN = auto()
+    CUMPROD = auto()
+
+    # Time series operations
+    PCT_CHANGE = auto()
+    DIFF = auto()
+    SHIFT = auto()
 
     # Phase 8: Data Reshaping operations
     PIVOT = auto()
@@ -147,8 +175,34 @@ class TokenType(Enum):
     RESET_INDEX = auto()
     APPLY_ROW = auto()
     APPLY_COLUMN = auto()
+    APPLYMAP = auto()  # Element-wise function application
+    MAP_VALUES = auto()  # Map values using dictionary
     RESAMPLE = auto()
     ASSIGN_CONST = auto()  # assign constant value operation
+
+    # Phase 12: Medium Priority Operations
+    # Scaling & Normalization (2)
+    ROBUST_SCALE = auto()
+    MAXABS_SCALE = auto()
+
+    # Advanced Encoding (2)
+    ORDINAL_ENCODE = auto()
+    TARGET_ENCODE = auto()
+
+    # Data Validation (3)
+    ASSERT_UNIQUE = auto()
+    ASSERT_NO_NULLS = auto()
+    ASSERT_RANGE = auto()
+
+    # Advanced Index Operations (2)
+    REINDEX = auto()
+    SET_MULTIINDEX = auto()
+
+    # Boolean Operations (4)
+    ANY = auto()
+    ALL = auto()
+    COUNT_TRUE = auto()
+    COMPARE = auto()
 
     # File format keywords
     CSV = auto()
@@ -288,6 +342,9 @@ class TokenType(Enum):
     ESCAPECHAR = auto()
     LINETERMINATOR = auto()
     FLOAT_FORMAT = auto()
+    TARGET = auto()  # For target encoding
+    CHARS = auto()  # For string strip operations
+    GROUP = auto()  # For regex extraction
 
     # Literals
     STRING_LITERAL = auto()
@@ -398,16 +455,32 @@ class Lexer:
             'upper': TokenType.UPPER,
             'lower': TokenType.LOWER,
             'strip': TokenType.STRIP,
+            'lstrip': TokenType.LSTRIP,
+            'rstrip': TokenType.RSTRIP,
+            'title': TokenType.TITLE,
+            'capitalize': TokenType.CAPITALIZE,
             'replace': TokenType.REPLACE,
             'split': TokenType.SPLIT,
             'concat': TokenType.CONCAT,
             'substring': TokenType.SUBSTRING,
             'length': TokenType.LENGTH,
+            'extract_regex': TokenType.EXTRACT_REGEX,
+            'find': TokenType.FIND,
             'parse_datetime': TokenType.PARSE_DATETIME,
             'extract_year': TokenType.EXTRACT_YEAR,
             'extract_month': TokenType.EXTRACT_MONTH,
             'extract_day': TokenType.EXTRACT_DAY,
+            'extract_hour': TokenType.EXTRACT_HOUR,
+            'extract_minute': TokenType.EXTRACT_MINUTE,
+            'extract_second': TokenType.EXTRACT_SECOND,
+            'extract_dayofweek': TokenType.EXTRACT_DAYOFWEEK,
+            'extract_dayofyear': TokenType.EXTRACT_DAYOFYEAR,
+            'extract_weekofyear': TokenType.EXTRACT_WEEKOFYEAR,
+            'extract_quarter': TokenType.EXTRACT_QUARTER,
             'date_diff': TokenType.DATE_DIFF,
+            'date_add': TokenType.DATE_ADD,
+            'date_subtract': TokenType.DATE_SUBTRACT,
+            'format_datetime': TokenType.FORMAT_DATETIME,
             'astype': TokenType.ASTYPE,
             'to_numeric': TokenType.TO_NUMERIC,
             'one_hot_encode': TokenType.ONE_HOT_ENCODE,
@@ -429,6 +502,7 @@ class Lexer:
             'count_duplicates': TokenType.COUNT_DUPLICATES,
             'drop_duplicates': TokenType.DROP_DUPLICATES,
             'qcut': TokenType.QCUT,
+            'cut': TokenType.CUT,
 
             # Phase 6: Data Ordering operations
             'sort_index': TokenType.SORT_INDEX,
@@ -449,6 +523,17 @@ class Lexer:
             'expanding_sum': TokenType.EXPANDING_SUM,
             'expanding_min': TokenType.EXPANDING_MIN,
             'expanding_max': TokenType.EXPANDING_MAX,
+
+            # Cumulative operations
+            'cumsum': TokenType.CUMSUM,
+            'cummax': TokenType.CUMMAX,
+            'cummin': TokenType.CUMMIN,
+            'cumprod': TokenType.CUMPROD,
+
+            # Time series operations
+            'pct_change': TokenType.PCT_CHANGE,
+            'diff': TokenType.DIFF,
+            'shift': TokenType.SHIFT,
 
             # Phase 8: Data Reshaping operations
             'pivot': TokenType.PIVOT,
@@ -472,8 +557,25 @@ class Lexer:
             'reset_index': TokenType.RESET_INDEX,
             'apply_row': TokenType.APPLY_ROW,
             'apply_column': TokenType.APPLY_COLUMN,
+            'applymap': TokenType.APPLYMAP,
+            'map_values': TokenType.MAP_VALUES,
             'resample': TokenType.RESAMPLE,
             'assign': TokenType.ASSIGN_CONST,
+
+            # Phase 12: Medium Priority Operations
+            'robust_scale': TokenType.ROBUST_SCALE,
+            'maxabs_scale': TokenType.MAXABS_SCALE,
+            'ordinal_encode': TokenType.ORDINAL_ENCODE,
+            'target_encode': TokenType.TARGET_ENCODE,
+            'assert_unique': TokenType.ASSERT_UNIQUE,
+            'assert_no_nulls': TokenType.ASSERT_NO_NULLS,
+            'assert_range': TokenType.ASSERT_RANGE,
+            'reindex': TokenType.REINDEX,
+            'set_multiindex': TokenType.SET_MULTIINDEX,
+            'any': TokenType.ANY,
+            'all': TokenType.ALL,
+            'count_true': TokenType.COUNT_TRUE,
+            'compare': TokenType.COMPARE,
 
             # File formats
             'csv': TokenType.CSV,
@@ -536,6 +638,9 @@ class Lexer:
             'unit': TokenType.UNIT,
             'old': TokenType.OLD,
             'new': TokenType.NEW,
+            'target': TokenType.TARGET,
+            'chars': TokenType.CHARS,
+            'group': TokenType.GROUP,
             'delimiter_str': TokenType.DELIMITER_STR,
             'start': TokenType.START,
             'end': TokenType.END,

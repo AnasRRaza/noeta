@@ -274,6 +274,101 @@ class Parser:
         elif token.type == TokenType.ASSIGN_CONST:
             return self.parse_assign()
 
+        # Phase 11: High-Priority Missing Operations
+        # Cumulative operations
+        elif token.type == TokenType.CUMSUM:
+            return self.parse_cumsum()
+        elif token.type == TokenType.CUMMAX:
+            return self.parse_cummax()
+        elif token.type == TokenType.CUMMIN:
+            return self.parse_cummin()
+        elif token.type == TokenType.CUMPROD:
+            return self.parse_cumprod()
+
+        # Time series operations
+        elif token.type == TokenType.PCT_CHANGE:
+            return self.parse_pct_change()
+        elif token.type == TokenType.DIFF:
+            return self.parse_diff()
+        elif token.type == TokenType.SHIFT:
+            return self.parse_shift()
+
+        # Apply/Map operations
+        elif token.type == TokenType.APPLYMAP:
+            return self.parse_applymap()
+        elif token.type == TokenType.MAP_VALUES:
+            return self.parse_map_values()
+
+        # Additional date/time extractions
+        elif token.type == TokenType.EXTRACT_HOUR:
+            return self.parse_extract_hour()
+        elif token.type == TokenType.EXTRACT_MINUTE:
+            return self.parse_extract_minute()
+        elif token.type == TokenType.EXTRACT_SECOND:
+            return self.parse_extract_second()
+        elif token.type == TokenType.EXTRACT_DAYOFWEEK:
+            return self.parse_extract_dayofweek()
+        elif token.type == TokenType.EXTRACT_DAYOFYEAR:
+            return self.parse_extract_dayofyear()
+        elif token.type == TokenType.EXTRACT_WEEKOFYEAR:
+            return self.parse_extract_weekofyear()
+        elif token.type == TokenType.EXTRACT_QUARTER:
+            return self.parse_extract_quarter()
+
+        # Date arithmetic
+        elif token.type == TokenType.DATE_ADD:
+            return self.parse_date_add()
+        elif token.type == TokenType.DATE_SUBTRACT:
+            return self.parse_date_subtract()
+        elif token.type == TokenType.FORMAT_DATETIME:
+            return self.parse_format_datetime()
+
+        # Advanced string operations
+        elif token.type == TokenType.EXTRACT_REGEX:
+            return self.parse_extract_regex()
+        elif token.type == TokenType.TITLE:
+            return self.parse_title()
+        elif token.type == TokenType.CAPITALIZE:
+            return self.parse_capitalize()
+        elif token.type == TokenType.LSTRIP:
+            return self.parse_lstrip()
+        elif token.type == TokenType.RSTRIP:
+            return self.parse_rstrip()
+        elif token.type == TokenType.FIND:
+            return self.parse_find()
+
+        # Binning with explicit boundaries
+        elif token.type == TokenType.CUT:
+            return self.parse_cut()
+
+        # Phase 12: Medium Priority Operations
+        elif token.type == TokenType.ROBUST_SCALE:
+            return self.parse_robust_scale()
+        elif token.type == TokenType.MAXABS_SCALE:
+            return self.parse_maxabs_scale()
+        elif token.type == TokenType.ORDINAL_ENCODE:
+            return self.parse_ordinal_encode()
+        elif token.type == TokenType.TARGET_ENCODE:
+            return self.parse_target_encode()
+        elif token.type == TokenType.ASSERT_UNIQUE:
+            return self.parse_assert_unique()
+        elif token.type == TokenType.ASSERT_NO_NULLS:
+            return self.parse_assert_no_nulls()
+        elif token.type == TokenType.ASSERT_RANGE:
+            return self.parse_assert_range()
+        elif token.type == TokenType.REINDEX:
+            return self.parse_reindex()
+        elif token.type == TokenType.SET_MULTIINDEX:
+            return self.parse_set_multiindex()
+        elif token.type == TokenType.ANY:
+            return self.parse_any()
+        elif token.type == TokenType.ALL:
+            return self.parse_all()
+        elif token.type == TokenType.COUNT_TRUE:
+            return self.parse_count_true()
+        elif token.type == TokenType.COMPARE:
+            return self.parse_compare()
+
         elif token.type == TokenType.DROPNA:
             return self.parse_dropna()
         elif token.type == TokenType.FILLNA:
@@ -2821,3 +2916,565 @@ class Parser:
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return AssignNode(source, column, value, new_alias)
+
+    # ========================================================================
+    # HIGH-PRIORITY MISSING OPERATIONS (Phase 11) - Parser Methods
+    # ========================================================================
+
+    # Cumulative Operations
+    def parse_cumsum(self) -> 'CumSumNode':
+        """Parse: cumsum data column sales as cumulative_sales"""
+        from noeta_ast import CumSumNode
+        self.advance()  # consume CUMSUM
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return CumSumNode(source, column, new_alias)
+
+    def parse_cummax(self) -> 'CumMaxNode':
+        """Parse: cummax data column value as cumulative_max"""
+        from noeta_ast import CumMaxNode
+        self.advance()  # consume CUMMAX
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return CumMaxNode(source, column, new_alias)
+
+    def parse_cummin(self) -> 'CumMinNode':
+        """Parse: cummin data column value as cumulative_min"""
+        from noeta_ast import CumMinNode
+        self.advance()  # consume CUMMIN
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return CumMinNode(source, column, new_alias)
+
+    def parse_cumprod(self) -> 'CumProdNode':
+        """Parse: cumprod data column value as cumulative_product"""
+        from noeta_ast import CumProdNode
+        self.advance()  # consume CUMPROD
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return CumProdNode(source, column, new_alias)
+
+    # Time Series Operations
+    def parse_pct_change(self) -> 'PctChangeNode':
+        """Parse: pct_change data column price with periods=1 as price_change"""
+        from noeta_ast import PctChangeNode
+        self.advance()  # consume PCT_CHANGE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Default period
+        periods = 1
+        if self.match(TokenType.WITH):
+            self.advance()
+            self.expect(TokenType.PERIODS)
+            self.expect(TokenType.ASSIGN)
+            periods = self.expect(TokenType.NUMERIC_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return PctChangeNode(source, column, periods, new_alias)
+
+    def parse_diff(self) -> 'DiffNode':
+        """Parse: diff data column value with periods=1 as value_diff"""
+        from noeta_ast import DiffNode
+        self.advance()  # consume DIFF
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Default period
+        periods = 1
+        if self.match(TokenType.WITH):
+            self.advance()
+            self.expect(TokenType.PERIODS)
+            self.expect(TokenType.ASSIGN)
+            periods = self.expect(TokenType.NUMERIC_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return DiffNode(source, column, periods, new_alias)
+
+    def parse_shift(self) -> 'ShiftNode':
+        """Parse: shift data column value with periods=1 fill_value=0 as shifted"""
+        from noeta_ast import ShiftNode
+        self.advance()  # consume SHIFT
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Default values
+        periods = 1
+        fill_value = None
+
+        if self.match(TokenType.WITH):
+            self.advance()
+            # Parse parameters
+            if self.match(TokenType.PERIODS):
+                self.advance()
+                self.expect(TokenType.ASSIGN)
+                periods = self.expect(TokenType.NUMERIC_LITERAL).value
+
+            if self.match(TokenType.FILL_VALUE):
+                self.advance()
+                self.expect(TokenType.ASSIGN)
+                fill_value = self.parse_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ShiftNode(source, column, periods, fill_value, new_alias)
+
+    # Apply/Map Operations
+    def parse_applymap(self) -> 'ApplyMapNode':
+        """Parse: applymap data function="lambda x: x * 2" as doubled"""
+        from noeta_ast import ApplyMapNode
+        self.advance()  # consume APPLYMAP
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.FUNCTION)
+        self.expect(TokenType.ASSIGN)
+        function_expr = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ApplyMapNode(source, function_expr, new_alias)
+
+    def parse_map_values(self) -> 'MapValuesNode':
+        """Parse: map_values data column status mapping={"active": 1, "inactive": 0} as status_coded"""
+        from noeta_ast import MapValuesNode
+        self.advance()  # consume MAP_VALUES
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.MAPPING)
+        self.expect(TokenType.ASSIGN)
+        mapping = self.parse_dict_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return MapValuesNode(source, column, mapping, new_alias)
+
+    # Additional Date/Time Extraction Operations
+    def parse_extract_hour(self) -> 'ExtractHourNode':
+        """Parse: extract_hour data column timestamp as hour"""
+        from noeta_ast import ExtractHourNode
+        self.advance()  # consume EXTRACT_HOUR
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExtractHourNode(source, column, new_alias)
+
+    def parse_extract_minute(self) -> 'ExtractMinuteNode':
+        """Parse: extract_minute data column timestamp as minute"""
+        from noeta_ast import ExtractMinuteNode
+        self.advance()  # consume EXTRACT_MINUTE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExtractMinuteNode(source, column, new_alias)
+
+    def parse_extract_second(self) -> 'ExtractSecondNode':
+        """Parse: extract_second data column timestamp as second"""
+        from noeta_ast import ExtractSecondNode
+        self.advance()  # consume EXTRACT_SECOND
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExtractSecondNode(source, column, new_alias)
+
+    def parse_extract_dayofweek(self) -> 'ExtractDayOfWeekNode':
+        """Parse: extract_dayofweek data column timestamp as day_of_week"""
+        from noeta_ast import ExtractDayOfWeekNode
+        self.advance()  # consume EXTRACT_DAYOFWEEK
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExtractDayOfWeekNode(source, column, new_alias)
+
+    def parse_extract_dayofyear(self) -> 'ExtractDayOfYearNode':
+        """Parse: extract_dayofyear data column timestamp as day_of_year"""
+        from noeta_ast import ExtractDayOfYearNode
+        self.advance()  # consume EXTRACT_DAYOFYEAR
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExtractDayOfYearNode(source, column, new_alias)
+
+    def parse_extract_weekofyear(self) -> 'ExtractWeekOfYearNode':
+        """Parse: extract_weekofyear data column timestamp as week_of_year"""
+        from noeta_ast import ExtractWeekOfYearNode
+        self.advance()  # consume EXTRACT_WEEKOFYEAR
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExtractWeekOfYearNode(source, column, new_alias)
+
+    def parse_extract_quarter(self) -> 'ExtractQuarterNode':
+        """Parse: extract_quarter data column timestamp as quarter"""
+        from noeta_ast import ExtractQuarterNode
+        self.advance()  # consume EXTRACT_QUARTER
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExtractQuarterNode(source, column, new_alias)
+
+    # Date Arithmetic Operations
+    def parse_date_add(self) -> 'DateAddNode':
+        """Parse: date_add data column timestamp value=5 unit="days" as future_date"""
+        from noeta_ast import DateAddNode
+        self.advance()  # consume DATE_ADD
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.VALUE)
+        self.expect(TokenType.ASSIGN)
+        value = self.expect(TokenType.NUMERIC_LITERAL).value
+        self.expect(TokenType.UNIT)
+        self.expect(TokenType.ASSIGN)
+        unit = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return DateAddNode(source, column, value, unit, new_alias)
+
+    def parse_date_subtract(self) -> 'DateSubtractNode':
+        """Parse: date_subtract data column timestamp value=5 unit="days" as past_date"""
+        from noeta_ast import DateSubtractNode
+        self.advance()  # consume DATE_SUBTRACT
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.VALUE)
+        self.expect(TokenType.ASSIGN)
+        value = self.expect(TokenType.NUMERIC_LITERAL).value
+        self.expect(TokenType.UNIT)
+        self.expect(TokenType.ASSIGN)
+        unit = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return DateSubtractNode(source, column, value, unit, new_alias)
+
+    def parse_format_datetime(self) -> 'FormatDateTimeNode':
+        """Parse: format_datetime data column timestamp format="%Y-%m-%d" as formatted_date"""
+        from noeta_ast import FormatDateTimeNode
+        self.advance()  # consume FORMAT_DATETIME
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.FORMAT)
+        self.expect(TokenType.ASSIGN)
+        format_string = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FormatDateTimeNode(source, column, format_string, new_alias)
+
+    # Advanced String Operations
+    def parse_extract_regex(self) -> 'ExtractRegexNode':
+        """Parse: extract_regex data column text pattern="[0-9]+" group=0 as numbers"""
+        from noeta_ast import ExtractRegexNode
+        self.advance()  # consume EXTRACT_REGEX
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.PATTERN)
+        self.expect(TokenType.ASSIGN)
+        pattern = self.expect(TokenType.STRING_LITERAL).value
+
+        # Optional group parameter
+        group = 0
+        if self.match(TokenType.IDENTIFIER) and self.current_token().value == "group":
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            group = self.expect(TokenType.NUMERIC_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ExtractRegexNode(source, column, pattern, group, new_alias)
+
+    def parse_title(self) -> 'TitleNode':
+        """Parse: title data column text as title_case"""
+        from noeta_ast import TitleNode
+        self.advance()  # consume TITLE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return TitleNode(source, column, new_alias)
+
+    def parse_capitalize(self) -> 'CapitalizeNode':
+        """Parse: capitalize data column text as capitalized"""
+        from noeta_ast import CapitalizeNode
+        self.advance()  # consume CAPITALIZE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return CapitalizeNode(source, column, new_alias)
+
+    def parse_lstrip(self) -> 'LStripNode':
+        """Parse: lstrip data column text with chars=" " as left_stripped"""
+        from noeta_ast import LStripNode
+        self.advance()  # consume LSTRIP
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Optional chars parameter
+        chars = None
+        if self.match(TokenType.WITH):
+            self.advance()
+            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "chars":
+                self.advance()
+                self.expect(TokenType.ASSIGN)
+                chars = self.expect(TokenType.STRING_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return LStripNode(source, column, chars, new_alias)
+
+    def parse_rstrip(self) -> 'RStripNode':
+        """Parse: rstrip data column text with chars=" " as right_stripped"""
+        from noeta_ast import RStripNode
+        self.advance()  # consume RSTRIP
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Optional chars parameter
+        chars = None
+        if self.match(TokenType.WITH):
+            self.advance()
+            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "chars":
+                self.advance()
+                self.expect(TokenType.ASSIGN)
+                chars = self.expect(TokenType.STRING_LITERAL).value
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RStripNode(source, column, chars, new_alias)
+
+    def parse_find(self) -> 'FindNode':
+        """Parse: find data column text substring="hello" as position"""
+        from noeta_ast import FindNode
+        self.advance()  # consume FIND
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.SUBSTRING)
+        self.expect(TokenType.ASSIGN)
+        substring = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return FindNode(source, column, substring, new_alias)
+
+    # Binning with Explicit Boundaries
+    def parse_cut(self) -> 'CutNode':
+        """Parse: cut data column age bins=[0, 18, 35, 50, 100] labels=["child", "young", "middle", "senior"] as age_group"""
+        from noeta_ast import CutNode
+        self.advance()  # consume CUT
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.BINS)
+        self.expect(TokenType.ASSIGN)
+        bins = self.parse_list_value()
+
+        # Optional parameters
+        labels = None
+        include_lowest = False
+
+        if self.match(TokenType.LABELS):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            labels = self.parse_list_value()
+
+        if self.match(TokenType.IDENTIFIER) and self.current_token().value == "include_lowest":
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            include_lowest = self.parse_value()
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return CutNode(source, column, bins, labels, include_lowest, new_alias)
+
+    # ===== PHASE 12: MEDIUM PRIORITY OPERATIONS =====
+
+    # Scaling & Normalization Operations
+    def parse_robust_scale(self) -> 'RobustScaleNode':
+        """Parse: robust_scale data column price as price_robust"""
+        from noeta_ast import RobustScaleNode
+        self.advance()  # consume ROBUST_SCALE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return RobustScaleNode(source, column, new_alias)
+
+    def parse_maxabs_scale(self) -> 'MaxAbsScaleNode':
+        """Parse: maxabs_scale data column value as value_scaled"""
+        from noeta_ast import MaxAbsScaleNode
+        self.advance()  # consume MAXABS_SCALE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return MaxAbsScaleNode(source, column, new_alias)
+
+    # Advanced Encoding Operations
+    def parse_ordinal_encode(self) -> 'OrdinalEncodeNode':
+        """Parse: ordinal_encode data column size order=["S", "M", "L", "XL"] as size_encoded"""
+        from noeta_ast import OrdinalEncodeNode
+        self.advance()  # consume ORDINAL_ENCODE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.ORDER)
+        self.expect(TokenType.ASSIGN)
+        order = self.parse_list_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return OrdinalEncodeNode(source, column, order, new_alias)
+
+    def parse_target_encode(self) -> 'TargetEncodeNode':
+        """Parse: target_encode data column category target="sales" as category_encoded"""
+        from noeta_ast import TargetEncodeNode
+        self.advance()  # consume TARGET_ENCODE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.TARGET)
+        self.expect(TokenType.ASSIGN)
+        target = self.expect(TokenType.STRING_LITERAL).value
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return TargetEncodeNode(source, column, target, new_alias)
+
+    # Data Validation Operations
+    def parse_assert_unique(self) -> 'AssertUniqueNode':
+        """Parse: assert_unique data column id"""
+        from noeta_ast import AssertUniqueNode
+        self.advance()  # consume ASSERT_UNIQUE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        return AssertUniqueNode(source, column)
+
+    def parse_assert_no_nulls(self) -> 'AssertNoNullsNode':
+        """Parse: assert_no_nulls data column required_field"""
+        from noeta_ast import AssertNoNullsNode
+        self.advance()  # consume ASSERT_NO_NULLS
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        return AssertNoNullsNode(source, column)
+
+    def parse_assert_range(self) -> 'AssertRangeNode':
+        """Parse: assert_range data column age min=0 max=120"""
+        from noeta_ast import AssertRangeNode
+        self.advance()  # consume ASSERT_RANGE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        
+        min_value = None
+        max_value = None
+        
+        if self.match(TokenType.MIN):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            min_value = self.parse_value()
+        
+        if self.match(TokenType.MAX):
+            self.advance()
+            self.expect(TokenType.ASSIGN)
+            max_value = self.parse_value()
+        
+        return AssertRangeNode(source, column, min_value, max_value)
+
+    # Advanced Index Operations
+    def parse_reindex(self) -> 'ReindexNode':
+        """Parse: reindex data with index=[0, 1, 2, 3] as reindexed"""
+        from noeta_ast import ReindexNode
+        self.advance()  # consume REINDEX
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.INDEX)
+        self.expect(TokenType.ASSIGN)
+        index = self.parse_list_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return ReindexNode(source, index, new_alias)
+
+    def parse_set_multiindex(self) -> 'SetMultiIndexNode':
+        """Parse: set_multiindex data columns ["category", "subcategory"] as hierarchical"""
+        from noeta_ast import SetMultiIndexNode
+        self.advance()  # consume SET_MULTIINDEX
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMNS)
+        columns = self.parse_list_value()
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+        return SetMultiIndexNode(source, columns, new_alias)
+
+    # Boolean Operations
+    def parse_any(self) -> 'AnyNode':
+        """Parse: any data column flag"""
+        from noeta_ast import AnyNode
+        self.advance()  # consume ANY
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        return AnyNode(source, column)
+
+    def parse_all(self) -> 'AllNode':
+        """Parse: all data column flag"""
+        from noeta_ast import AllNode
+        self.advance()  # consume ALL
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        return AllNode(source, column)
+
+    def parse_count_true(self) -> 'CountTrueNode':
+        """Parse: count_true data column flag"""
+        from noeta_ast import CountTrueNode
+        self.advance()  # consume COUNT_TRUE
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        return CountTrueNode(source, column)
+
+    def parse_compare(self) -> 'CompareNode':
+        """Parse: compare df1 with df2"""
+        from noeta_ast import CompareNode
+        self.advance()  # consume COMPARE
+        left_alias = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        right_alias = self.expect(TokenType.IDENTIFIER).value
+        return CompareNode(left_alias, right_alias)

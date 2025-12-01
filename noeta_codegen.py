@@ -1438,3 +1438,358 @@ class CodeGenerator:
         code += f"print(f'Assigned value to column {node.column}')"
         self.code_lines.append(code)
         self.symbol_table[node.new_alias] = True
+
+    # ========================================================================
+    # HIGH-PRIORITY MISSING OPERATIONS (Phase 11) - Code Generator Methods
+    # ========================================================================
+
+    # Cumulative Operations
+    def visit_CumSumNode(self, node):
+        """Generate: df['col_cumsum'] = df['col'].cumsum()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_cumsum'] = {node.source_alias}['{node.column}'].cumsum()\n"
+        code += f"print(f'Computed cumulative sum for column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_CumMaxNode(self, node):
+        """Generate: df['col_cummax'] = df['col'].cummax()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_cummax'] = {node.source_alias}['{node.column}'].cummax()\n"
+        code += f"print(f'Computed cumulative maximum for column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_CumMinNode(self, node):
+        """Generate: df['col_cummin'] = df['col'].cummin()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_cummin'] = {node.source_alias}['{node.column}'].cummin()\n"
+        code += f"print(f'Computed cumulative minimum for column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_CumProdNode(self, node):
+        """Generate: df['col_cumprod'] = df['col'].cumprod()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_cumprod'] = {node.source_alias}['{node.column}'].cumprod()\n"
+        code += f"print(f'Computed cumulative product for column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Time Series Operations
+    def visit_PctChangeNode(self, node):
+        """Generate: df['col_pct_change'] = df['col'].pct_change(periods=n)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_pct_change'] = {node.source_alias}['{node.column}'].pct_change(periods={node.periods})\n"
+        code += f"print(f'Computed percentage change for column {node.column} with periods={node.periods}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_DiffNode(self, node):
+        """Generate: df['col_diff'] = df['col'].diff(periods=n)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_diff'] = {node.source_alias}['{node.column}'].diff(periods={node.periods})\n"
+        code += f"print(f'Computed difference for column {node.column} with periods={node.periods}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ShiftNode(self, node):
+        """Generate: df['col_shifted'] = df['col'].shift(periods=n, fill_value=val)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.fill_value is not None:
+            code += f"{node.new_alias}['{node.column}_shifted'] = {node.source_alias}['{node.column}'].shift(periods={node.periods}, fill_value={self._format_value(node.fill_value)})\n"
+        else:
+            code += f"{node.new_alias}['{node.column}_shifted'] = {node.source_alias}['{node.column}'].shift(periods={node.periods})\n"
+        code += f"print(f'Shifted column {node.column} by {node.periods} periods')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Apply/Map Operations
+    def visit_ApplyMapNode(self, node):
+        """Generate: df = df.map(function) or df.applymap(function) for older pandas"""
+        self.imports.add("import pandas as pd")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        # Use map() for pandas 2.1+ (applymap is deprecated)
+        code += f"# Using map for element-wise function application\n"
+        code += f"{node.new_alias} = {node.source_alias}.map({node.function_expr})\n"
+        code += f"print(f'Applied function element-wise to dataframe')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_MapValuesNode(self, node):
+        """Generate: df['col_mapped'] = df['col'].map(mapping_dict)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_mapped'] = {node.source_alias}['{node.column}'].map({node.mapping})\n"
+        code += f"print(f'Mapped values in column {node.column} using dictionary')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Additional Date/Time Extraction Operations
+    def visit_ExtractHourNode(self, node):
+        """Generate: df['hour'] = df['col'].dt.hour"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_hour'] = {node.source_alias}['{node.column}'].dt.hour\n"
+        code += f"print(f'Extracted hour from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractMinuteNode(self, node):
+        """Generate: df['minute'] = df['col'].dt.minute"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_minute'] = {node.source_alias}['{node.column}'].dt.minute\n"
+        code += f"print(f'Extracted minute from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractSecondNode(self, node):
+        """Generate: df['second'] = df['col'].dt.second"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_second'] = {node.source_alias}['{node.column}'].dt.second\n"
+        code += f"print(f'Extracted second from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractDayOfWeekNode(self, node):
+        """Generate: df['day_of_week'] = df['col'].dt.dayofweek"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_dayofweek'] = {node.source_alias}['{node.column}'].dt.dayofweek\n"
+        code += f"print(f'Extracted day of week from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractDayOfYearNode(self, node):
+        """Generate: df['day_of_year'] = df['col'].dt.dayofyear"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_dayofyear'] = {node.source_alias}['{node.column}'].dt.dayofyear\n"
+        code += f"print(f'Extracted day of year from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractWeekOfYearNode(self, node):
+        """Generate: df['week_of_year'] = df['col'].dt.isocalendar().week"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_weekofyear'] = {node.source_alias}['{node.column}'].dt.isocalendar().week\n"
+        code += f"print(f'Extracted week of year from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractQuarterNode(self, node):
+        """Generate: df['quarter'] = df['col'].dt.quarter"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_quarter'] = {node.source_alias}['{node.column}'].dt.quarter\n"
+        code += f"print(f'Extracted quarter from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Date Arithmetic Operations
+    def visit_DateAddNode(self, node):
+        """Generate: df['date_future'] = df['col'] + pd.Timedelta(**{unit: value})"""
+        self.imports.add("import pandas as pd")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_plus_{node.value}{node.unit}'] = {node.source_alias}['{node.column}'] + pd.Timedelta(**{{'{node.unit}': {node.value}}})\n"
+        code += f"print(f'Added {node.value} {node.unit} to column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_DateSubtractNode(self, node):
+        """Generate: df['date_past'] = df['col'] - pd.Timedelta(**{unit: value})"""
+        self.imports.add("import pandas as pd")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_minus_{node.value}{node.unit}'] = {node.source_alias}['{node.column}'] - pd.Timedelta(**{{'{node.unit}': {node.value}}})\n"
+        code += f"print(f'Subtracted {node.value} {node.unit} from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FormatDateTimeNode(self, node):
+        """Generate: df['date_formatted'] = df['col'].dt.strftime(format)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_formatted'] = {node.source_alias}['{node.column}'].dt.strftime('{node.format_string}')\n"
+        code += f"print(f'Formatted datetime column {node.column} with format {node.format_string}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Advanced String Operations
+    def visit_ExtractRegexNode(self, node):
+        """Generate: df['extracted'] = df['col'].str.extract(pattern, expand=False)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        # Add capture group if pattern doesn't have one
+        pattern = node.pattern if '(' in node.pattern else f'({node.pattern})'
+        code += f"{node.new_alias}['{node.column}_extracted'] = {node.source_alias}['{node.column}'].str.extract(r'{pattern}', expand=False)\n"
+        if node.group > 0:
+            code += f"# Note: Extracting group {node.group}\n"
+        code += f"print(f'Extracted regex pattern from column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_TitleNode(self, node):
+        """Generate: df['col_title'] = df['col'].str.title()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_title'] = {node.source_alias}['{node.column}'].str.title()\n"
+        code += f"print(f'Converted column {node.column} to title case')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_CapitalizeNode(self, node):
+        """Generate: df['col_capitalized'] = df['col'].str.capitalize()"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_capitalized'] = {node.source_alias}['{node.column}'].str.capitalize()\n"
+        code += f"print(f'Capitalized column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_LStripNode(self, node):
+        """Generate: df['col_lstripped'] = df['col'].str.lstrip(chars)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.chars:
+            code += f"{node.new_alias}['{node.column}_lstripped'] = {node.source_alias}['{node.column}'].str.lstrip('{node.chars}')\n"
+        else:
+            code += f"{node.new_alias}['{node.column}_lstripped'] = {node.source_alias}['{node.column}'].str.lstrip()\n"
+        code += f"print(f'Left-stripped column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_RStripNode(self, node):
+        """Generate: df['col_rstripped'] = df['col'].str.rstrip(chars)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.chars:
+            code += f"{node.new_alias}['{node.column}_rstripped'] = {node.source_alias}['{node.column}'].str.rstrip('{node.chars}')\n"
+        else:
+            code += f"{node.new_alias}['{node.column}_rstripped'] = {node.source_alias}['{node.column}'].str.rstrip()\n"
+        code += f"print(f'Right-stripped column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_FindNode(self, node):
+        """Generate: df['col_position'] = df['col'].str.find(substring)"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_position'] = {node.source_alias}['{node.column}'].str.find('{node.substring}')\n"
+        code += f"print(f'Found position of substring in column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Binning with Explicit Boundaries
+    def visit_CutNode(self, node):
+        """Generate: df['col_binned'] = pd.cut(df['col'], bins=bins, labels=labels)"""
+        self.imports.add("import pandas as pd")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        if node.labels:
+            code += f"{node.new_alias}['{node.column}_binned'] = pd.cut({node.source_alias}['{node.column}'], bins={node.bins}, labels={node.labels}, include_lowest={node.include_lowest})\n"
+        else:
+            code += f"{node.new_alias}['{node.column}_binned'] = pd.cut({node.source_alias}['{node.column}'], bins={node.bins}, include_lowest={node.include_lowest})\n"
+        code += f"print(f'Binned column {node.column} with explicit boundaries')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # ===== PHASE 12: MEDIUM PRIORITY OPERATIONS =====
+
+    # Scaling & Normalization Operations
+    def visit_RobustScaleNode(self, node):
+        """Generate: from sklearn.preprocessing import RobustScaler; df['col_robust'] = RobustScaler().fit_transform(df[['col']])"""
+        self.imports.add("from sklearn.preprocessing import RobustScaler")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"scaler = RobustScaler()\n"
+        code += f"{node.new_alias}['{node.column}_robust'] = scaler.fit_transform({node.source_alias}[['{node.column}']])\n"
+        code += f"print(f'Applied robust scaling to column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_MaxAbsScaleNode(self, node):
+        """Generate: from sklearn.preprocessing import MaxAbsScaler; df['col_maxabs'] = MaxAbsScaler().fit_transform(df[['col']])"""
+        self.imports.add("from sklearn.preprocessing import MaxAbsScaler")
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"scaler = MaxAbsScaler()\n"
+        code += f"{node.new_alias}['{node.column}_maxabs'] = scaler.fit_transform({node.source_alias}[['{node.column}']])\n"
+        code += f"print(f'Applied max abs scaling to column {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Advanced Encoding Operations
+    def visit_OrdinalEncodeNode(self, node):
+        """Generate: df['col_encoded'] = df['col'].map({'S': 1, 'M': 2, 'L': 3, 'XL': 4})"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        # Create mapping dict from order list
+        mapping = {val: idx + 1 for idx, val in enumerate(node.order)}
+        code += f"{node.new_alias}['{node.column}_encoded'] = {node.source_alias}['{node.column}'].map({mapping})\n"
+        code += f"print(f'Ordinal encoded column {node.column} with order {node.order}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_TargetEncodeNode(self, node):
+        """Generate: df['col_encoded'] = df['col'].map(df.groupby('col')['target'].mean())"""
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"target_means = {node.source_alias}.groupby('{node.column}')['{node.target}'].mean()\n"
+        code += f"{node.new_alias}['{node.column}_target_encoded'] = {node.source_alias}['{node.column}'].map(target_means)\n"
+        code += f"print(f'Target encoded column {node.column} using target {node.target}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Data Validation Operations
+    def visit_AssertUniqueNode(self, node):
+        """Generate: assert df['col'].is_unique, 'Duplicate values found in column'"""
+        code = f"assert {node.source_alias}['{node.column}'].is_unique, f'Duplicate values found in column {node.column}'\n"
+        code += f"print(f'Assertion passed: Column {node.column} has unique values')"
+        self.code_lines.append(code)
+
+    def visit_AssertNoNullsNode(self, node):
+        """Generate: assert not df['col'].isnull().any(), 'Null values found in column'"""
+        code = f"assert not {node.source_alias}['{node.column}'].isnull().any(), f'Null values found in column {node.column}'\n"
+        code += f"print(f'Assertion passed: Column {node.column} has no null values')"
+        self.code_lines.append(code)
+
+    def visit_AssertRangeNode(self, node):
+        """Generate: assert df['col'].between(min, max).all(), 'Values outside range'"""
+        code = ""
+        if node.min_value is not None and node.max_value is not None:
+            code += f"assert {node.source_alias}['{node.column}'].between({node.min_value}, {node.max_value}).all(), f'Values outside range [{node.min_value}, {node.max_value}] in column {node.column}'\n"
+            code += f"print(f'Assertion passed: Column {node.column} values are within range [{node.min_value}, {node.max_value}]')"
+        elif node.min_value is not None:
+            code += f"assert ({node.source_alias}['{node.column}'] >= {node.min_value}).all(), f'Values below minimum {node.min_value} in column {node.column}'\n"
+            code += f"print(f'Assertion passed: Column {node.column} values are >= {node.min_value}')"
+        elif node.max_value is not None:
+            code += f"assert ({node.source_alias}['{node.column}'] <= {node.max_value}).all(), f'Values above maximum {node.max_value} in column {node.column}'\n"
+            code += f"print(f'Assertion passed: Column {node.column} values are <= {node.max_value}')"
+        self.code_lines.append(code)
+
+    # Advanced Index Operations
+    def visit_ReindexNode(self, node):
+        """Generate: df_reindexed = df.reindex([0, 1, 2, 3])"""
+        code = f"{node.new_alias} = {node.source_alias}.reindex({node.index})\n"
+        code += f"print(f'Reindexed dataframe with new index {node.index}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_SetMultiIndexNode(self, node):
+        """Generate: df_hierarchical = df.set_index(['category', 'subcategory'])"""
+        # Convert list to proper Python list representation
+        columns_repr = repr(node.columns)
+        columns_str = ', '.join(node.columns)
+        code = f"{node.new_alias} = {node.source_alias}.set_index({columns_repr})\n"
+        code += f"print(f'Set multi-index using columns: {columns_str}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    # Boolean Operations
+    def visit_AnyNode(self, node):
+        """Generate: result = df['col'].any()"""
+        code = f"result = {node.source_alias}['{node.column}'].any()\n"
+        code += f"print(f'Any True in column {node.column}: {{result}}')"
+        self.code_lines.append(code)
+
+    def visit_AllNode(self, node):
+        """Generate: result = df['col'].all()"""
+        code = f"result = {node.source_alias}['{node.column}'].all()\n"
+        code += f"print(f'All True in column {node.column}: {{result}}')"
+        self.code_lines.append(code)
+
+    def visit_CountTrueNode(self, node):
+        """Generate: result = df['col'].sum()"""
+        code = f"result = {node.source_alias}['{node.column}'].sum()\n"
+        code += f"print(f'Count of True values in column {node.column}: {{result}}')"
+        self.code_lines.append(code)
+
+    def visit_CompareNode(self, node):
+        """Generate: comparison = df1.compare(df2)"""
+        code = f"comparison = {node.left_alias}.compare({node.right_alias})\n"
+        code += f"print(f'Compared {node.left_alias} with {node.right_alias}')\n"
+        code += f"print(comparison)"
+        self.code_lines.append(code)

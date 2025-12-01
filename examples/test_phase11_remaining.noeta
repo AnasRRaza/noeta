@@ -1,0 +1,11 @@
+# Test remaining Phase 11 operations
+load csv "data/sales_data.csv" as sales
+
+# String operations that need special handling
+lstrip sales column category with chars=" " as test_lstrip
+rstrip sales column category with chars=" " as test_rstrip
+find sales column category substring="Electronics" as test_find
+
+# Display results
+head test_lstrip with n=5 as result
+describe result

@@ -1,0 +1,131 @@
+# Noeta DSL - Phase 11: High-Priority Missing Operations Demo
+# This file demonstrates all 26 newly implemented operations
+
+# Load sample data
+load csv "data/sales_data.csv" as sales
+
+# ============================================================================
+# CUMULATIVE OPERATIONS (4 operations)
+# ============================================================================
+
+# Cumulative Sum - Running total of sales
+cumsum sales column quantity as running_total
+
+# Cumulative Maximum - Highest price seen so far
+cummax sales column price as max_price_so_far
+
+# Cumulative Minimum - Lowest price seen so far
+cummin sales column price as min_price_so_far
+
+# Cumulative Product - For growth rates
+cumsum sales column revenue as cumulative_revenue
+
+# ============================================================================
+# TIME SERIES OPERATIONS (3 operations)
+# ============================================================================
+
+# Percentage Change - Period-over-period growth
+pct_change sales column price with periods=1 as price_growth_rate
+
+# Difference - Absolute change between periods
+diff sales column quantity with periods=1 as quantity_change
+
+# Shift - Access previous/future values
+shift sales column price with periods=1 fill_value=0 as previous_price
+
+# ============================================================================
+# APPLY/MAP OPERATIONS (2 operations)
+# ============================================================================
+
+# Map Values - Replace values using dictionary
+map_values sales column status mapping={"active": 1, "inactive": 0, "pending": 2} as status_code
+
+# Element-wise function application
+applymap sales function="lambda x: x * 1.1 if isinstance(x, (int, float)) else x" as inflated_data
+
+# ============================================================================
+# DATE/TIME EXTRACTION OPERATIONS (7 operations)
+# ============================================================================
+
+# Assume we have a timestamp column - first parse it
+parse_datetime sales column order_date as sales_with_dates
+
+# Extract Hour from timestamp
+extract_hour sales_with_dates column order_date as hour_of_day
+
+# Extract Minute from timestamp
+extract_minute sales_with_dates column order_date as minute_of_hour
+
+# Extract Second from timestamp
+extract_second sales_with_dates column order_date as second_of_minute
+
+# Extract Day of Week (0=Monday, 6=Sunday)
+extract_dayofweek sales_with_dates column order_date as weekday
+
+# Extract Day of Year (1-365/366)
+extract_dayofyear sales_with_dates column order_date as day_of_year
+
+# Extract Week of Year (1-52/53)
+extract_weekofyear sales_with_dates column order_date as week_number
+
+# Extract Quarter (1-4)
+extract_quarter sales_with_dates column order_date as fiscal_quarter
+
+# ============================================================================
+# DATE ARITHMETIC OPERATIONS (3 operations)
+# ============================================================================
+
+# Add days to date
+date_add sales_with_dates column order_date value=7 unit="days" as delivery_date
+
+# Subtract days from date
+date_subtract sales_with_dates column order_date value=30 unit="days" as month_ago_date
+
+# Format datetime as string
+format_datetime sales_with_dates column order_date format="%Y-%m-%d" as formatted_date
+
+# ============================================================================
+# ADVANCED STRING OPERATIONS (6 operations)
+# ============================================================================
+
+# Extract numbers from text using regex
+extract_regex sales column product_code pattern="[0-9]+" group=0 as extracted_numbers
+
+# Convert to Title Case (First Letter Of Each Word Capitalized)
+title sales column product_name as title_case_name
+
+# Capitalize (Only first letter of first word)
+capitalize sales column description as capitalized_desc
+
+# Left strip - remove leading whitespace or characters
+lstrip sales column product_name with chars=" " as left_trimmed
+
+# Right strip - remove trailing whitespace or characters
+rstrip sales column product_name with chars=" " as right_trimmed
+
+# Find substring position (-1 if not found)
+find sales column product_name substring="Pro" as pro_position
+
+# ============================================================================
+# BINNING WITH EXPLICIT BOUNDARIES (1 operation)
+# ============================================================================
+
+# Create age groups with explicit bin edges
+cut sales column age bins=[0, 18, 35, 50, 100] labels=["child", "young_adult", "middle_aged", "senior"] as age_group
+
+# ============================================================================
+# SUMMARY: All 26 New Operations Demonstrated
+# ============================================================================
+
+# Cumulative: cumsum, cummax, cummin, cumprod (4)
+# Time Series: pct_change, diff, shift (3)
+# Apply/Map: applymap, map_values (2)
+# Date Extraction: extract_hour, extract_minute, extract_second, extract_dayofweek,
+#                  extract_dayofyear, extract_weekofyear, extract_quarter (7)
+# Date Arithmetic: date_add, date_subtract, format_datetime (3)
+# String Operations: extract_regex, title, capitalize, lstrip, rstrip, find (6)
+# Binning: cut (1)
+#
+# TOTAL: 26 High-Priority Operations
+
+describe running_total

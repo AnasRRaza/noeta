@@ -1,0 +1,8 @@
+# Simple test for cumulative operations
+load csv "data/sales_data.csv" as sales
+
+# Test cumulative sum
+cumsum sales column quantity as cumulative_quantity
+
+# Display result
+describe cumulative_quantity

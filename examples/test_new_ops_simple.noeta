@@ -1,0 +1,16 @@
+# Test new operations with real data
+load csv "data/sales_data.csv" as sales
+
+# Test cumulative sum
+cumsum sales column quantity as sales_cumsum
+
+# Test percentage change
+pct_change sales column price with periods=1 as price_changes
+
+# Test day of week extraction (after parsing date)
+parse_datetime sales column date as sales_dated
+extract_dayofweek sales_dated column date as weekday
+
+# Show results
+head sales_cumsum with n=5 as result
+describe result

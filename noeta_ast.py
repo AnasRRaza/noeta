@@ -917,3 +917,270 @@ class AssignNode(ASTNode):
     column: str
     value: Any  # Constant value or expression
     new_alias: str
+
+# ============================================================================
+# HIGH-PRIORITY MISSING OPERATIONS (Phase 11)
+# ============================================================================
+
+# Cumulative Operations
+@dataclass
+class CumSumNode(ASTNode):
+    source_alias: str
+    column: str  # Column to compute cumulative sum on
+    new_alias: str
+
+@dataclass
+class CumMaxNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class CumMinNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class CumProdNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+# Time Series Operations
+@dataclass
+class PctChangeNode(ASTNode):
+    source_alias: str
+    column: str
+    periods: int  # Number of periods to shift for forming percent change
+    new_alias: str
+
+@dataclass
+class DiffNode(ASTNode):
+    source_alias: str
+    column: str
+    periods: int  # Number of periods to shift for calculating difference
+    new_alias: str
+
+@dataclass
+class ShiftNode(ASTNode):
+    source_alias: str
+    column: str
+    periods: int  # Number of periods to shift
+    fill_value: Optional[Any]  # Value to use for newly introduced missing values
+    new_alias: str
+
+# Apply/Map Operations
+@dataclass
+class ApplyMapNode(ASTNode):
+    source_alias: str
+    function_expr: str  # Function to apply element-wise
+    new_alias: str
+
+@dataclass
+class MapValuesNode(ASTNode):
+    source_alias: str
+    column: str
+    mapping: dict  # Dictionary mapping old values to new values
+    new_alias: str
+
+# Additional Date/Time Extraction Operations
+@dataclass
+class ExtractHourNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ExtractMinuteNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ExtractSecondNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ExtractDayOfWeekNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ExtractDayOfYearNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ExtractWeekOfYearNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class ExtractQuarterNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+# Date Arithmetic Operations
+@dataclass
+class DateAddNode(ASTNode):
+    source_alias: str
+    column: str
+    value: int  # Amount to add
+    unit: str  # Unit: 'days', 'weeks', 'months', 'years', 'hours', 'minutes', 'seconds'
+    new_alias: str
+
+@dataclass
+class DateSubtractNode(ASTNode):
+    source_alias: str
+    column: str
+    value: int  # Amount to subtract
+    unit: str  # Unit: 'days', 'weeks', 'months', 'years', 'hours', 'minutes', 'seconds'
+    new_alias: str
+
+@dataclass
+class FormatDateTimeNode(ASTNode):
+    source_alias: str
+    column: str
+    format_string: str  # strftime format string (e.g., "%Y-%m-%d")
+    new_alias: str
+
+# Advanced String Operations
+@dataclass
+class ExtractRegexNode(ASTNode):
+    source_alias: str
+    column: str
+    pattern: str  # Regex pattern to extract
+    group: int  # Regex group to extract (default 0)
+    new_alias: str
+
+@dataclass
+class TitleNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class CapitalizeNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class LStripNode(ASTNode):
+    source_alias: str
+    column: str
+    chars: Optional[str]  # Characters to remove (default whitespace)
+    new_alias: str
+
+@dataclass
+class RStripNode(ASTNode):
+    source_alias: str
+    column: str
+    chars: Optional[str]  # Characters to remove (default whitespace)
+    new_alias: str
+
+@dataclass
+class FindNode(ASTNode):
+    source_alias: str
+    column: str
+    substring: str  # Substring to find
+    new_alias: str
+
+# Binning with Explicit Boundaries
+@dataclass
+class CutNode(ASTNode):
+    source_alias: str
+    column: str
+    bins: Any  # List of bin edges or number of equal-width bins
+    labels: Optional[List[str]]  # Labels for bins
+    include_lowest: bool  # Whether to include lowest value
+    new_alias: str
+
+# ===== PHASE 12: MEDIUM PRIORITY OPERATIONS =====
+
+# Scaling & Normalization Operations
+@dataclass
+class RobustScaleNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+@dataclass
+class MaxAbsScaleNode(ASTNode):
+    source_alias: str
+    column: str
+    new_alias: str
+
+# Advanced Encoding Operations
+@dataclass
+class OrdinalEncodeNode(ASTNode):
+    source_alias: str
+    column: str
+    order: List[str]  # Ordered list of categories
+    new_alias: str
+
+@dataclass
+class TargetEncodeNode(ASTNode):
+    source_alias: str
+    column: str
+    target: str  # Target column name for encoding
+    new_alias: str
+
+# Data Validation Operations
+@dataclass
+class AssertUniqueNode(ASTNode):
+    source_alias: str
+    column: str
+
+@dataclass
+class AssertNoNullsNode(ASTNode):
+    source_alias: str
+    column: str
+
+@dataclass
+class AssertRangeNode(ASTNode):
+    source_alias: str
+    column: str
+    min_value: Optional[Any]
+    max_value: Optional[Any]
+
+# Advanced Index Operations
+@dataclass
+class ReindexNode(ASTNode):
+    source_alias: str
+    index: List[Any]  # New index values
+    new_alias: str
+
+@dataclass
+class SetMultiIndexNode(ASTNode):
+    source_alias: str
+    columns: List[str]  # Columns to use for multi-index
+    new_alias: str
+
+# Boolean Operations
+@dataclass
+class AnyNode(ASTNode):
+    source_alias: str
+    column: str
+
+@dataclass
+class AllNode(ASTNode):
+    source_alias: str
+    column: str
+
+@dataclass
+class CountTrueNode(ASTNode):
+    source_alias: str
+    column: str
+
+@dataclass
+class CompareNode(ASTNode):
+    left_alias: str
+    right_alias: str

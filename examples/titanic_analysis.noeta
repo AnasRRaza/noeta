@@ -2,7 +2,7 @@
 # This script demonstrates various data analysis operations on the Titanic dataset
 
 # Load the dataset
-load "titanic.csv" as titanic
+load "data/titanic.csv" as titanic
 
 # Display basic information about the dataset
 info titanic
