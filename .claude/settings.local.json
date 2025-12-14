@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(cd:*)",
+      "Bash(timeout 20 python:*)"
+    ]
+  }
+}
