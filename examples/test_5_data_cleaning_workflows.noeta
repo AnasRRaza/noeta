@@ -1,0 +1,99 @@
+# ============================================
+# Test 5: Data Cleaning Workflows
+# ============================================
+# Data File: messy_data.csv
+# Operations: Load, analyze, filter, clean duplicates
+# ============================================
+
+load "data/messy_data.csv" as messy
+info messy
+describe messy
+
+# ANALYZE ORIGINAL DATA
+select messy {id, name, age, email} as key_columns
+head key_columns with n=15 as key_top
+
+select messy {id, salary, department, hire_date} as detail_columns
+head detail_columns with n=15 as detail_top
+
+# FILTER OUT PROBLEMATIC DATA
+# Filter for rows where ID exists (non-null would be > 0)
+filter messy where id > 0 as valid_ids
+info valid_ids
+
+# DUPLICATE DETECTION AND REMOVAL
+count_duplicates messy
+drop_duplicates messy as unique_data
+info unique_data
+
+# ANALYZE CLEANED DATA
+describe unique_data
+head unique_data with n=20 as unique_top
+
+# FILTER BY DEPARTMENT
+select unique_data {id, name, department, salary} as dept_data
+head dept_data with n=20 as dept_sample
+
+# ANALYZE NUMERIC COLUMNS
+select messy {id, age, salary} as numeric_cols
+filter numeric_cols where age > 0 as valid_age
+info valid_age
+
+filter numeric_cols where salary > 0 as valid_salary
+info valid_salary
+
+filter valid_age where salary > 0 as fully_valid_numeric
+info fully_valid_numeric
+head fully_valid_numeric with n=15 as valid_top
+
+# SORT BY DIFFERENT COLUMNS
+sort messy by id asc as sorted_by_id
+head sorted_by_id with n=10 as first10_byid
+
+sort messy by age desc as sorted_by_age
+head sorted_by_age with n=10 as oldest10
+
+sort messy by salary desc as sorted_by_salary
+head sorted_by_salary with n=10 as highest_paid10
+
+# COMBINED CLEANING WORKFLOW
+# Step 1: Remove duplicates
+drop_duplicates messy as clean_step1
+# Step 2: Filter valid IDs
+filter clean_step1 where id > 0 as clean_step2
+# Step 3: Filter valid age
+filter clean_step2 where age > 0 as clean_step3
+# Step 4: Filter valid salary
+filter clean_step3 where salary > 0 as clean_final
+info clean_final
+describe clean_final
+
+# ANALYZE BY SALARY RANGES
+filter clean_final where salary > 50000 as high_salary
+info high_salary
+head high_salary with n=10 as high_salary_top
+
+filter clean_final where salary < 50000 as low_salary
+info low_salary
+head low_salary with n=10 as low_salary_top
+
+# AGE RANGE ANALYSIS
+filter clean_final where age > 40 as senior_staff
+info senior_staff
+
+filter clean_final where age < 30 as junior_staff
+info junior_staff
+
+# SAMPLE CLEANED DATA
+sample clean_final with n=50 as sample_clean
+describe sample_clean
+
+# FINAL VALIDATION
+select clean_final {id, name, age, salary, department} as final_subset
+sort final_subset by salary desc as final_sorted
+head final_sorted with n=25 as top25_final
+tail final_sorted with n=25 as bottom25_final
+
+# ============================================
+# Data Cleaning Workflows Complete - 30 tests
+# ============================================

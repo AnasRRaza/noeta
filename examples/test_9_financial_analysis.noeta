@@ -1,0 +1,145 @@
+# ============================================
+# Test 9: Financial Data Analysis
+# ============================================
+# Data Files: stock_prices.csv, company_fundamentals.csv
+# Operations: Load, analyze, filter stock and company data
+# ============================================
+
+load "data/stock_prices.csv" as stocks
+load "data/company_fundamentals.csv" as fundamentals
+
+# ANALYZE BOTH DATASETS
+info stocks
+describe stocks
+
+info fundamentals
+describe fundamentals
+
+# SELECT KEY STOCK COLUMNS
+select stocks {date, ticker, open, close} as price_data
+head price_data with n=15 as price_top
+
+select stocks {date, ticker, high, low, volume} as trading_data
+head trading_data with n=15 as trading_top
+
+# FILTER BY TICKER
+filter stocks where ticker == "AAPL" as aapl_stock
+info aapl_stock
+head aapl_stock with n=20 as aapl_top
+
+filter stocks where ticker == "MSFT" as msft_stock
+info msft_stock
+head msft_stock with n=20 as msft_top
+
+filter stocks where ticker == "GOOGL" as googl_stock
+info googl_stock
+head googl_stock with n=15 as googl_top
+
+# FILTER BY PRICE LEVELS
+filter stocks where close > 150 as high_price_stocks
+info high_price_stocks
+head high_price_stocks with n=15 as high_price_top
+
+filter stocks where close < 50 as low_price_stocks
+info low_price_stocks
+head low_price_stocks with n=10 as low_price_top
+
+filter stocks where close >= 50 as step1
+filter step1 where close <= 150 as mid_price_stocks
+info mid_price_stocks
+
+# FILTER BY VOLUME
+filter stocks where volume > 50000000 as high_volume
+info high_volume
+head high_volume with n=15 as high_vol_top
+
+filter stocks where volume < 10000000 as low_volume
+info low_volume
+
+# SORT STOCK DATA
+sort stocks by close desc as sorted_by_close
+head sorted_by_close with n=20 as top20_close
+
+sort stocks by volume desc as sorted_by_volume
+head sorted_by_volume with n=15 as top15_volume
+
+sort stocks by open desc as sorted_by_open
+head sorted_by_open with n=10 as top10_open
+
+# SAMPLE STOCK DATA
+sample stocks with n=100 as stock_sample
+describe stock_sample
+
+sample stocks with n=50 as stock_small_sample
+info stock_small_sample
+
+# ANALYZE COMPANY FUNDAMENTALS
+select fundamentals {ticker, sector, market_cap} as company_info
+head company_info with n=20 as company_top
+
+select fundamentals {ticker, pe_ratio, dividend_yield} as valuation_metrics
+head valuation_metrics with n=15 as valuation_top
+
+# FILTER FUNDAMENTALS BY SECTOR
+filter fundamentals where sector == "Technology" as tech_companies
+info tech_companies
+head tech_companies with n=10 as tech_top
+
+filter fundamentals where sector == "Finance" as finance_companies
+info finance_companies
+
+# FILTER BY VALUATION METRICS
+filter fundamentals where market_cap > 500 as large_cap
+info large_cap
+head large_cap with n=10 as large_cap_top
+
+filter fundamentals where market_cap < 100 as small_cap
+info small_cap
+
+filter fundamentals where pe_ratio > 20 as high_pe
+info high_pe
+head high_pe with n=10 as high_pe_top
+
+filter fundamentals where dividend_yield > 2 as high_dividend
+info high_dividend
+head high_dividend with n=10 as high_div_top
+
+# SORT FUNDAMENTALS
+sort fundamentals by market_cap desc as sorted_by_mcap
+head sorted_by_mcap with n=10 as largest_companies
+
+sort fundamentals by pe_ratio desc as sorted_by_pe
+head sorted_by_pe with n=10 as highest_pe
+
+sort fundamentals by dividend_yield desc as sorted_by_div
+head sorted_by_div with n=10 as highest_div
+
+# COMBINED ANALYSIS
+filter stocks where close > 100 as step_a
+filter step_a where volume > 20000000 as liquid_expensive
+info liquid_expensive
+head liquid_expensive with n=15 as liquid_exp_top
+
+filter fundamentals where market_cap > 200 as step_b
+filter step_b where pe_ratio < 30 as value_large_cap
+info value_large_cap
+
+# TICKER-SPECIFIC ANALYSIS
+filter stocks where ticker == "AAPL" as aapl_data
+sort aapl_data by close desc as aapl_sorted
+head aapl_sorted with n=20 as aapl_highest_prices
+tail aapl_sorted with n=20 as aapl_lowest_prices
+
+filter stocks where ticker == "TSLA" as tesla_data
+info tesla_data
+head tesla_data with n=15 as tesla_top
+
+# FINAL VALIDATION
+select stocks {ticker, date, close, volume} as final_stocks
+sort final_stocks by close desc as final_sorted
+head final_sorted with n=30 as top30_stocks
+tail final_sorted with n=30 as bottom30_stocks
+
+# ============================================
+# Financial Analysis Complete - 35 tests
+# ============================================

@@ -1,0 +1,130 @@
+# ============================================
+# Test 8: Sales Data Aggregation & Analysis
+# ============================================
+# Data Files: sales_data.csv, large_sales.csv
+# Operations: Load, groupby, analyze sales data
+# ============================================
+
+load "data/sales_data.csv" as sales
+load "data/large_sales.csv" as large
+
+# ANALYZE BOTH DATASETS
+info sales
+describe sales
+
+info large
+describe large
+
+# SELECT KEY COLUMNS FROM SALES
+select sales {product_id, category, price, quantity} as sales_subset1
+head sales_subset1 with n=10 as sales_top1
+
+select sales {customer_id, date, discount} as sales_subset2
+head sales_subset2 with n=10 as sales_top2
+
+# FILTER SALES DATA
+filter sales where price > 50 as high_price_sales
+info high_price_sales
+head high_price_sales with n=10 as high_price_top
+
+filter sales where quantity > 5 as high_quantity_sales
+info high_quantity_sales
+head high_quantity_sales with n=10 as high_qty_top
+
+filter sales where discount > 0 as discounted_sales
+info discounted_sales
+
+# GROUPBY CATEGORY
+groupby sales by {category} compute {count: product_id} as category_counts
+describe category_counts
+
+groupby sales by {category} compute {sum: price} as category_revenue
+describe category_revenue
+
+# SORT SALES DATA
+sort sales by price desc as sorted_by_price
+head sorted_by_price with n=15 as top15_price
+
+sort sales by quantity desc as sorted_by_quantity
+head sorted_by_quantity with n=10 as top10_quantity
+
+sort sales by discount desc as sorted_by_discount
+head sorted_by_discount with n=10 as top10_discount
+
+# ANALYZE LARGE SALES DATASET
+select large {product_id, category, price, quantity} as large_subset
+head large_subset with n=20 as large_top
+
+# FILTER LARGE DATASET
+filter large where price > 100 as large_high_price
+info large_high_price
+head large_high_price with n=15 as large_high_top
+
+filter large where quantity > 10 as large_high_qty
+info large_high_qty
+
+# GROUPBY ON LARGE DATASET
+groupby large by {category} compute {count: product_id} as large_cat_count
+describe large_cat_count
+
+groupby large by {category} compute {sum: quantity} as large_cat_qty
+describe large_cat_qty
+
+# SAMPLE LARGE DATASET
+sample large with n=200 as large_sample
+describe large_sample
+
+sample large with n=100 as large_sample_small
+info large_sample_small
+
+# COMBINED ANALYSIS
+filter sales where price > 30 as step1
+filter step1 where quantity > 3 as sales_filtered
+sort sales_filtered by price desc as sales_sorted
+head sales_sorted with n=20 as top20_sales
+
+# CATEGORY ANALYSIS ON SALES
+filter sales where category == "Electronics" as electronics
+info electronics
+head electronics with n=10 as elec_top
+
+filter sales where category == "Books" as books
+info books
+head books with n=10 as books_top
+
+# DISCOUNT ANALYSIS
+filter sales where discount == 0 as no_discount
+info no_discount
+head no_discount with n=10 as no_disc_top
+
+filter sales where discount > 0 as with_discount
+filter with_discount where discount < 20 as moderate_discount
+info moderate_discount
+
+# PRICE RANGES ON LARGE DATASET
+filter large where price < 50 as low_price_large
+info low_price_large
+
+filter large where price >= 50 as step_a
+filter step_a where price <= 100 as mid_price_large
+info mid_price_large
+
+filter large where price > 100 as high_price_large
+info high_price_large
+
+# SORT LARGE DATASET
+sort large by price asc as large_sorted_asc
+head large_sorted_asc with n=15 as cheapest15
+
+sort large by price desc as large_sorted_desc
+head large_sorted_desc with n=15 as expensive15
+
+# FINAL VALIDATION
+select sales {product_id, category, price, quantity, discount} as final_sales
+sort final_sales by price desc as final_sorted
+head final_sorted with n=25 as top25_sales
+tail final_sorted with n=25 as bottom25_sales
+
+# ============================================
+# Sales Aggregation & Analysis Complete - 35 tests
+# ============================================

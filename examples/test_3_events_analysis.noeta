@@ -1,0 +1,52 @@
+# ============================================
+# Test 3: Events Data Analysis
+# ============================================
+# Data File: events_data.csv
+# Operations: Load, select, filter, sort, groupby
+# ============================================
+
+load "data/events_data.csv" as events
+info events
+describe events
+
+# SELECT OPERATIONS
+select events {event_id, event_name, category} as basic_info
+head basic_info with n=10 as basic_top
+
+select events {event_id, location, attendees} as event_stats
+head event_stats with n=10 as stats_top
+
+# FILTER OPERATIONS
+filter events where attendees > 50 as large_events
+info large_events
+head large_events with n=10 as large_top
+
+filter events where attendees > 100 as very_large_events
+info very_large_events
+
+# SORTING OPERATIONS
+sort events by attendees desc as sorted_by_size
+head sorted_by_size with n=10 as largest10
+
+# GROUPBY OPERATIONS
+groupby events by {category} compute {count: event_id} as category_counts
+describe category_counts
+
+groupby events by {location} compute {count: event_id} as location_counts
+describe location_counts
+
+groupby large_events by {category} compute {count: event_id} as large_by_category
+describe large_by_category
+
+# COMBINED OPERATIONS
+filter events where attendees > 75 as popular_events
+sort popular_events by attendees desc as popular_sorted
+head popular_sorted with n=20 as top20_popular
+
+# HEAD AND TAIL
+head events with n=30 as first30
+tail events with n=30 as last30
+
+# ============================================
+# Events Analysis Complete - 24 tests
+# ============================================

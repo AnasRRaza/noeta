@@ -1,0 +1,149 @@
+# ============================================
+# Test 6: Data Combining & Analysis
+# ============================================
+# Data Files: wide_data.csv, long_data.csv, dataset_a.csv, dataset_b.csv
+# Operations: Load multiple datasets, analyze, compare
+# ============================================
+
+# LOAD ALL DATASETS
+load "data/wide_data.csv" as wide
+load "data/long_data.csv" as long
+load "data/dataset_a.csv" as data_a
+load "data/dataset_b.csv" as data_b
+
+# ANALYZE EACH DATASET
+info wide
+describe wide
+
+info long
+describe long
+
+info data_a
+describe data_a
+
+info data_b
+describe data_b
+
+# ANALYZE WIDE DATA
+select wide {id, product, Q1, Q2} as wide_subset1
+head wide_subset1 with n=10 as wide_top1
+
+select wide {id, product, Q3, Q4} as wide_subset2
+head wide_subset2 with n=10 as wide_top2
+
+# FILTER WIDE DATA
+filter wide where Q1 > 5000 as high_q1
+info high_q1
+head high_q1 with n=10 as high_q1_top
+
+filter wide where Q2 > 10000 as high_q2
+info high_q2
+
+# SORT WIDE DATA
+sort wide by Q1 desc as sorted_q1
+head sorted_q1 with n=10 as top_q1_performers
+
+sort wide by Q4 desc as sorted_q4
+head sorted_q4 with n=10 as top_q4_performers
+
+# SAMPLE WIDE DATA
+sample wide with n=30 as wide_sample
+describe wide_sample
+
+# ANALYZE LONG DATA
+select long {id, product, quarter, sales} as long_subset
+head long_subset with n=20 as long_top
+
+# FILTER LONG DATA
+filter long where sales > 10000 as high_sales
+info high_sales
+head high_sales with n=15 as high_sales_top
+
+filter long where id > 50 as recent_entries
+info recent_entries
+
+# SORT LONG DATA
+sort long by sales desc as sorted_sales
+head sorted_sales with n=15 as top15_sales
+
+sort long by id asc as sorted_id
+head sorted_id with n=10 as first10_id
+
+# SAMPLE LONG DATA
+sample long with n=100 as long_sample
+describe long_sample
+
+# ANALYZE DATASET A
+select data_a {key_id, name_a, value_a} as data_a_subset
+head data_a_subset with n=15 as data_a_top
+
+# FILTER DATASET A
+filter data_a where value_a > 50 as high_value_a
+info high_value_a
+head high_value_a with n=10 as high_va_top
+
+filter data_a where key_id < 25 as low_key_a
+info low_key_a
+
+# SORT DATASET A
+sort data_a by value_a desc as sorted_value_a
+head sorted_value_a with n=10 as top10_value_a
+
+sort data_a by key_id asc as sorted_key_a
+head sorted_key_a with n=10 as first10_key_a
+
+# ANALYZE DATASET B
+select data_b {key_id, name_b, value_b} as data_b_subset
+head data_b_subset with n=15 as data_b_top
+
+# FILTER DATASET B
+filter data_b where value_b > 50 as high_value_b
+info high_value_b
+head high_value_b with n=10 as high_vb_top
+
+filter data_b where key_id < 30 as low_key_b
+info low_key_b
+
+# SORT DATASET B
+sort data_b by value_b desc as sorted_value_b
+head sorted_value_b with n=10 as top10_value_b
+
+sort data_b by key_id asc as sorted_key_b
+head sorted_key_b with n=10 as first10_key_b
+
+# COMPARE DATASETS A AND B
+# Both have similar structure, analyze separately
+
+# Dataset A analysis
+filter data_a where value_a > 30 as mid_value_a
+sort mid_value_a by value_a desc as sorted_mid_a
+head sorted_mid_a with n=20 as top20_mid_a
+
+# Dataset B analysis
+filter data_b where value_b > 30 as mid_value_b
+sort mid_value_b by value_b desc as sorted_mid_b
+head sorted_mid_b with n=20 as top20_mid_b
+
+# SAMPLE FROM EACH DATASET
+sample data_a with n=20 as sample_a
+describe sample_a
+
+sample data_b with n=25 as sample_b
+describe sample_b
+
+# FINAL VALIDATION
+head wide with n=25 as final_wide
+tail wide with n=25 as final_wide_tail
+
+head long with n=50 as final_long
+tail long with n=50 as final_long_tail
+
+head data_a with n=30 as final_a
+tail data_a with n=20 as final_a_tail
+
+head data_b with n=30 as final_b
+tail data_b with n=30 as final_b_tail
+
+# ============================================
+# Data Combining & Analysis Complete - 35 tests
+# ============================================

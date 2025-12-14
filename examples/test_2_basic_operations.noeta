@@ -1,0 +1,42 @@
+# ============================================
+# Test 2: Basic Operations on Text Data
+# ============================================
+# Data File: text_data.csv
+# Operations: Load, select, filter, sort, groupby
+# ============================================
+
+load "data/text_data.csv" as text
+info text
+describe text
+
+# SELECT OPERATIONS
+select text {id, name, email} as subset1
+info subset1
+head subset1 with n=10 as subset1_top
+
+select text {id, name, phone} as subset2
+head subset2 with n=5 as subset2_top
+
+# FILTER OPERATIONS
+filter text where id > 50 as high_ids
+info high_ids
+head high_ids with n=10 as high_ids_top
+
+# SORTING
+sort text by id desc as sorted_desc
+head sorted_desc with n=10 as top10
+
+sort text by id asc as sorted_asc
+head sorted_asc with n=10 as bottom10
+
+# GROUPBY
+groupby text by {name} compute {count: id} as name_counts
+describe name_counts
+
+# HEAD AND TAIL
+head text with n=20 as first20
+tail text with n=20 as last20
+
+# ============================================
+# Basic Operations Test Complete - 16 tests
+# ============================================

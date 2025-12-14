@@ -1,0 +1,6 @@
+# Minimal test
+load "data/sales_data.csv" as sales
+info sales
+describe sales
+head sales with n=10 as top10
+info top10

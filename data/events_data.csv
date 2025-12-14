@@ -1,0 +1,201 @@
+event_id,event_name,start_datetime,end_datetime,category,location,attendees
+EVT0001,Training on Data Science 1,2024-04-26 10:15:00,2024-04-26 14:15:00,Conference,Sydney,401
+EVT0002,Meeting on Data Science 2,2024-01-25 08:30:00,2024-01-25 13:30:00,Workshop,New York,113
+EVT0003,Webinar on Data Science 3,2023-01-24 18:45:00,2023-01-24 21:45:00,Workshop,New York,77
+EVT0004,Webinar on Data Science 4,2023-03-12 12:45:00,2023-03-12 13:45:00,Meeting,Online,219
+EVT0005,Conference on Data Science 5,2024-06-21 11:30:00,2024-06-21 13:00:00,Conference,Singapore,180
+EVT0006,Meeting on Data Science 6,2023-11-01 10:15:00,2023-11-01 14:15:00,Meeting,Singapore,279
+EVT0007,Training on Data Science 7,2024-12-06 10:45:00,2024-12-06 14:45:00,Meeting,Online,10
+EVT0008,Training on Data Science 8,2024-07-28 17:15:00,2024-07-28 18:15:00,Training,London,170
+EVT0009,Meeting on Data Science 9,2024-11-11 13:00:00,2024-11-11 14:30:00,Workshop,Singapore,447
+EVT0010,Training on Data Science 10,2023-11-21 09:45:00,2023-11-21 12:45:00,Conference,Singapore,487
+EVT0011,Conference on Data Science 11,2023-05-09 18:45:00,2023-05-09 19:45:00,Workshop,Berlin,101
+EVT0012,Workshop on Data Science 12,2024-03-06 16:15:00,2024-03-06 21:15:00,Webinar,London,492
+EVT0013,Webinar on Data Science 13,2023-07-15 18:00:00,2023-07-15 22:00:00,Conference,Tokyo,464
+EVT0014,Meeting on Data Science 14,2023-11-11 16:00:00,2023-11-11 22:00:00,Meeting,Singapore,185
+EVT0015,Webinar on Data Science 15,2023-12-27 16:45:00,2023-12-28 00:45:00,Conference,London,239
+EVT0016,Training on Data Science 16,2024-03-14 13:15:00,2024-03-14 21:15:00,Workshop,Sydney,228
+EVT0017,Training on Data Science 17,2024-01-26 12:45:00,2024-01-26 15:45:00,Conference,New York,417
+EVT0018,Conference on Data Science 18,2023-04-17 09:00:00,2023-04-17 14:00:00,Meeting,Berlin,389
+EVT0019,Training on Data Science 19,2024-09-30 16:00:00,2024-09-30 22:00:00,Training,Online,21
+EVT0020,Workshop on Data Science 20,2024-11-14 12:45:00,2024-11-14 14:45:00,Meeting,Sydney,200
+EVT0021,Webinar on Data Science 21,2023-04-28 11:45:00,2023-04-28 12:45:00,Meeting,Singapore,469
+EVT0022,Workshop on Data Science 22,2024-10-22 14:00:00,2024-10-22 18:00:00,Training,Tokyo,142
+EVT0023,Workshop on Data Science 23,2024-11-05 12:30:00,2024-11-05 17:30:00,Conference,Singapore,21
+EVT0024,Training on Data Science 24,2023-01-16 08:15:00,2023-01-16 12:15:00,Training,Tokyo,176
+EVT0025,Training on Data Science 25,2023-06-24 17:45:00,2023-06-24 19:45:00,Meeting,London,320
+EVT0026,Workshop on Data Science 26,2024-10-21 14:00:00,2024-10-21 19:00:00,Meeting,Berlin,93
+EVT0027,Workshop on Data Science 27,2024-02-17 13:15:00,2024-02-17 18:15:00,Conference,Berlin,415
+EVT0028,Webinar on Data Science 28,2023-05-10 16:00:00,2023-05-10 21:00:00,Training,London,490
+EVT0029,Conference on Data Science 29,2023-11-27 11:00:00,2023-11-27 12:00:00,Meeting,New York,326
+EVT0030,Conference on Data Science 30,2024-08-30 10:00:00,2024-08-30 18:00:00,Training,Singapore,17
+EVT0031,Workshop on Data Science 31,2023-05-14 15:30:00,2023-05-14 17:00:00,Workshop,Tokyo,104
+EVT0032,Conference on Data Science 32,2024-07-02 11:45:00,2024-07-02 14:45:00,Webinar,New York,483
+EVT0033,Conference on Data Science 33,2023-05-28 18:00:00,2023-05-28 19:00:00,Meeting,Sydney,67
+EVT0034,Workshop on Data Science 34,2023-04-20 10:30:00,2023-04-20 13:30:00,Conference,New York,258
+EVT0035,Meeting on Data Science 35,2024-01-06 11:45:00,2024-01-06 12:45:00,Conference,Singapore,42
+EVT0036,Meeting on Data Science 36,2024-05-13 18:00:00,2024-05-13 20:00:00,Meeting,Tokyo,329
+EVT0037,Conference on Data Science 37,2024-04-06 10:15:00,2024-04-06 13:15:00,Workshop,Berlin,295
+EVT0038,Webinar on Data Science 38,2024-10-08 17:00:00,2024-10-08 18:00:00,Webinar,Singapore,319
+EVT0039,Training on Data Science 39,2024-09-06 16:00:00,2024-09-06 17:30:00,Webinar,New York,103
+EVT0040,Training on Data Science 40,2024-09-12 08:00:00,2024-09-12 16:00:00,Workshop,London,448
+EVT0041,Webinar on Data Science 41,2024-01-09 09:15:00,2024-01-09 09:45:00,Workshop,London,47
+EVT0042,Meeting on Data Science 42,2024-12-09 10:30:00,2024-12-09 13:30:00,Workshop,New York,183
+EVT0043,Meeting on Data Science 43,2024-12-26 16:30:00,2024-12-26 22:30:00,Meeting,Sydney,489
+EVT0044,Workshop on Data Science 44,2024-02-14 11:30:00,2024-02-14 13:00:00,Webinar,Singapore,57
+EVT0045,Workshop on Data Science 45,2024-08-20 17:30:00,2024-08-20 19:00:00,Meeting,Singapore,457
+EVT0046,Training on Data Science 46,2024-04-01 14:30:00,2024-04-01 18:30:00,Conference,Sydney,201
+EVT0047,Conference on Data Science 47,2024-03-15 11:30:00,2024-03-15 15:30:00,Meeting,London,460
+EVT0048,Webinar on Data Science 48,2023-02-04 16:30:00,2023-02-04 21:30:00,Training,Online,454
+EVT0049,Conference on Data Science 49,2024-10-22 16:30:00,2024-10-22 21:30:00,Conference,London,419
+EVT0050,Workshop on Data Science 50,2023-11-27 14:15:00,2023-11-27 18:15:00,Conference,London,341
+EVT0051,Conference on Data Science 51,2024-01-16 13:15:00,2024-01-16 17:15:00,Conference,Tokyo,357
+EVT0052,Training on Data Science 52,2023-01-12 13:15:00,2023-01-12 19:15:00,Webinar,London,292
+EVT0053,Training on Data Science 53,2023-03-09 14:30:00,2023-03-09 16:30:00,Workshop,New York,292
+EVT0054,Meeting on Data Science 54,2023-10-12 17:00:00,2023-10-12 22:00:00,Webinar,Online,168
+EVT0055,Meeting on Data Science 55,2023-07-22 11:00:00,2023-07-22 17:00:00,Conference,Tokyo,220
+EVT0056,Training on Data Science 56,2023-05-03 09:45:00,2023-05-03 11:15:00,Webinar,Sydney,201
+EVT0057,Conference on Data Science 57,2023-08-31 17:00:00,2023-08-31 20:00:00,Training,New York,471
+EVT0058,Conference on Data Science 58,2024-04-17 12:15:00,2024-04-17 17:15:00,Training,Sydney,25
+EVT0059,Meeting on Data Science 59,2023-12-12 18:00:00,2023-12-12 19:00:00,Conference,Online,415
+EVT0060,Webinar on Data Science 60,2024-03-01 12:30:00,2024-03-01 16:30:00,Meeting,New York,289
+EVT0061,Webinar on Data Science 61,2023-11-17 15:00:00,2023-11-17 20:00:00,Meeting,Singapore,439
+EVT0062,Conference on Data Science 62,2024-10-18 09:30:00,2024-10-18 10:30:00,Workshop,New York,427
+EVT0063,Meeting on Data Science 63,2023-01-11 10:00:00,2023-01-11 14:00:00,Workshop,London,50
+EVT0064,Webinar on Data Science 64,2023-07-15 13:00:00,2023-07-15 13:30:00,Conference,New York,29
+EVT0065,Training on Data Science 65,2023-11-08 09:30:00,2023-11-08 13:30:00,Meeting,Tokyo,362
+EVT0066,Workshop on Data Science 66,2023-06-24 10:45:00,2023-06-24 11:45:00,Webinar,Online,80
+EVT0067,Training on Data Science 67,2024-08-21 14:45:00,2024-08-21 15:45:00,Training,London,300
+EVT0068,Webinar on Data Science 68,2024-05-04 18:45:00,2024-05-04 21:45:00,Meeting,London,52
+EVT0069,Training on Data Science 69,2023-09-28 12:00:00,2023-09-28 16:00:00,Workshop,Berlin,336
+EVT0070,Conference on Data Science 70,2023-07-30 09:00:00,2023-07-30 15:00:00,Workshop,New York,348
+EVT0071,Meeting on Data Science 71,2023-08-10 15:45:00,2023-08-10 17:45:00,Conference,Tokyo,111
+EVT0072,Meeting on Data Science 72,2024-08-27 16:30:00,2024-08-27 19:30:00,Workshop,Online,263
+EVT0073,Meeting on Data Science 73,2023-04-19 10:15:00,2023-04-19 14:15:00,Meeting,Online,322
+EVT0074,Conference on Data Science 74,2024-06-09 11:45:00,2024-06-09 13:45:00,Webinar,Singapore,89
+EVT0075,Meeting on Data Science 75,2024-12-03 12:00:00,2024-12-03 13:30:00,Conference,Berlin,61
+EVT0076,Webinar on Data Science 76,2023-09-04 08:45:00,2023-09-04 10:15:00,Conference,Singapore,343
+EVT0077,Conference on Data Science 77,2024-06-27 15:30:00,2024-06-27 18:30:00,Training,New York,186
+EVT0078,Training on Data Science 78,2024-03-17 11:15:00,2024-03-17 16:15:00,Meeting,Sydney,175
+EVT0079,Conference on Data Science 79,2023-02-24 15:30:00,2023-02-24 19:30:00,Conference,Berlin,200
+EVT0080,Meeting on Data Science 80,2024-03-08 11:30:00,2024-03-08 13:30:00,Workshop,Sydney,146
+EVT0081,Meeting on Data Science 81,2024-06-26 17:45:00,2024-06-27 01:45:00,Conference,Berlin,30
+EVT0082,Conference on Data Science 82,2024-10-23 11:00:00,2024-10-23 13:00:00,Conference,New York,299
+EVT0083,Conference on Data Science 83,2023-09-30 11:00:00,2023-09-30 19:00:00,Webinar,London,456
+EVT0084,Conference on Data Science 84,2024-09-27 14:45:00,2024-09-27 19:45:00,Workshop,Berlin,426
+EVT0085,Workshop on Data Science 85,2024-12-09 12:45:00,2024-12-09 14:45:00,Workshop,Tokyo,331
+EVT0086,Conference on Data Science 86,2023-10-22 17:30:00,2023-10-22 18:00:00,Workshop,Sydney,469
+EVT0087,Workshop on Data Science 87,2024-12-18 17:45:00,2024-12-18 20:45:00,Workshop,Tokyo,353
+EVT0088,Meeting on Data Science 88,2023-03-13 10:15:00,2023-03-13 14:15:00,Workshop,New York,346
+EVT0089,Workshop on Data Science 89,2024-04-30 14:30:00,2024-04-30 15:00:00,Webinar,New York,92
+EVT0090,Training on Data Science 90,2024-11-26 08:30:00,2024-11-26 14:30:00,Conference,Singapore,452
+EVT0091,Conference on Data Science 91,2023-09-11 15:00:00,2023-09-11 15:30:00,Training,Berlin,153
+EVT0092,Conference on Data Science 92,2023-08-22 16:15:00,2023-08-22 17:45:00,Conference,Tokyo,416
+EVT0093,Training on Data Science 93,2023-12-10 15:45:00,2023-12-10 19:45:00,Webinar,Berlin,254
+EVT0094,Webinar on Data Science 94,2023-09-17 13:45:00,2023-09-17 14:15:00,Webinar,Berlin,175
+EVT0095,Webinar on Data Science 95,2024-06-14 18:45:00,2024-06-14 19:45:00,Training,Berlin,332
+EVT0096,Workshop on Data Science 96,2023-01-22 10:45:00,2023-01-22 12:45:00,Webinar,Singapore,20
+EVT0097,Workshop on Data Science 97,2023-09-08 17:45:00,2023-09-08 21:45:00,Conference,London,476
+EVT0098,Training on Data Science 98,2024-01-22 18:00:00,2024-01-22 21:00:00,Meeting,Sydney,94
+EVT0099,Meeting on Data Science 99,2023-09-29 18:30:00,2023-09-29 22:30:00,Training,Singapore,488
+EVT0100,Training on Data Science 100,2023-10-10 12:15:00,2023-10-10 12:45:00,Training,Berlin,180
+EVT0101,Training on Data Science 101,2024-09-19 09:45:00,2024-09-19 15:45:00,Webinar,Tokyo,61
+EVT0102,Workshop on Data Science 102,2023-01-09 15:15:00,2023-01-09 21:15:00,Training,Tokyo,324
+EVT0103,Meeting on Data Science 103,2024-07-25 18:15:00,2024-07-25 21:15:00,Webinar,New York,414
+EVT0104,Workshop on Data Science 104,2023-10-29 08:45:00,2023-10-29 09:15:00,Webinar,Online,308
+EVT0105,Conference on Data Science 105,2023-05-07 08:45:00,2023-05-07 11:45:00,Meeting,Tokyo,343
+EVT0106,Webinar on Data Science 106,2023-01-01 08:30:00,2023-01-01 10:00:00,Webinar,Online,444
+EVT0107,Webinar on Data Science 107,2024-05-29 18:15:00,2024-05-29 19:15:00,Workshop,Berlin,105
+EVT0108,Workshop on Data Science 108,2024-03-18 17:00:00,2024-03-18 20:00:00,Conference,Singapore,482
+EVT0109,Meeting on Data Science 109,2023-12-30 11:45:00,2023-12-30 16:45:00,Conference,Tokyo,476
+EVT0110,Training on Data Science 110,2023-11-06 17:30:00,2023-11-06 19:00:00,Meeting,Berlin,453
+EVT0111,Webinar on Data Science 111,2023-11-27 17:15:00,2023-11-27 19:15:00,Workshop,Singapore,288
+EVT0112,Webinar on Data Science 112,2023-07-24 12:30:00,2023-07-24 13:30:00,Training,Berlin,241
+EVT0113,Conference on Data Science 113,2024-07-12 10:45:00,2024-07-12 15:45:00,Workshop,Sydney,231
+EVT0114,Webinar on Data Science 114,2024-12-11 13:30:00,2024-12-11 19:30:00,Meeting,Singapore,220
+EVT0115,Conference on Data Science 115,2024-02-25 15:00:00,2024-02-25 23:00:00,Meeting,New York,391
+EVT0116,Training on Data Science 116,2023-05-24 17:30:00,2023-05-24 19:30:00,Training,Tokyo,70
+EVT0117,Meeting on Data Science 117,2024-09-27 16:30:00,2024-09-27 17:00:00,Workshop,Singapore,348
+EVT0118,Conference on Data Science 118,2023-01-07 15:45:00,2023-01-07 16:15:00,Conference,Tokyo,429
+EVT0119,Webinar on Data Science 119,2024-10-27 09:30:00,2024-10-27 10:30:00,Training,Singapore,358
+EVT0120,Conference on Data Science 120,2023-12-06 08:00:00,2023-12-06 16:00:00,Workshop,Sydney,78
+EVT0121,Workshop on Data Science 121,2024-07-29 15:15:00,2024-07-29 17:15:00,Webinar,Berlin,164
+EVT0122,Conference on Data Science 122,2023-01-07 15:15:00,2023-01-07 16:15:00,Conference,London,314
+EVT0123,Workshop on Data Science 123,2023-05-04 16:00:00,2023-05-04 18:00:00,Conference,Singapore,17
+EVT0124,Conference on Data Science 124,2024-06-01 15:45:00,2024-06-01 16:15:00,Webinar,Singapore,252
+EVT0125,Training on Data Science 125,2023-07-08 11:30:00,2023-07-08 17:30:00,Conference,Singapore,79
+EVT0126,Workshop on Data Science 126,2024-10-13 08:15:00,2024-10-13 09:45:00,Workshop,Sydney,384
+EVT0127,Meeting on Data Science 127,2024-12-17 16:15:00,2024-12-17 22:15:00,Webinar,Tokyo,346
+EVT0128,Webinar on Data Science 128,2023-04-13 17:45:00,2023-04-13 21:45:00,Meeting,Singapore,362
+EVT0129,Workshop on Data Science 129,2023-04-20 15:45:00,2023-04-20 20:45:00,Conference,Tokyo,239
+EVT0130,Training on Data Science 130,2023-05-04 17:45:00,2023-05-04 18:15:00,Webinar,New York,335
+EVT0131,Webinar on Data Science 131,2024-10-28 18:45:00,2024-10-28 19:15:00,Workshop,Singapore,456
+EVT0132,Webinar on Data Science 132,2024-04-14 12:00:00,2024-04-14 13:30:00,Training,Online,445
+EVT0133,Meeting on Data Science 133,2024-05-30 11:30:00,2024-05-30 19:30:00,Training,New York,94
+EVT0134,Meeting on Data Science 134,2024-11-02 10:30:00,2024-11-02 14:30:00,Workshop,Tokyo,406
+EVT0135,Meeting on Data Science 135,2024-11-05 12:45:00,2024-11-05 13:45:00,Meeting,Singapore,315
+EVT0136,Webinar on Data Science 136,2024-11-05 10:30:00,2024-11-05 12:00:00,Training,Sydney,183
+EVT0137,Conference on Data Science 137,2024-08-21 17:45:00,2024-08-21 18:45:00,Conference,Online,380
+EVT0138,Meeting on Data Science 138,2023-06-12 11:00:00,2023-06-12 12:00:00,Meeting,Tokyo,394
+EVT0139,Meeting on Data Science 139,2023-08-26 11:00:00,2023-08-26 12:30:00,Meeting,New York,36
+EVT0140,Conference on Data Science 140,2024-09-18 12:00:00,2024-09-18 12:30:00,Meeting,Online,196
+EVT0141,Webinar on Data Science 141,2024-09-13 18:00:00,2024-09-13 19:30:00,Conference,Berlin,235
+EVT0142,Webinar on Data Science 142,2024-01-22 10:15:00,2024-01-22 12:15:00,Meeting,Singapore,352
+EVT0143,Meeting on Data Science 143,2023-10-20 11:15:00,2023-10-20 12:45:00,Training,Online,409
+EVT0144,Workshop on Data Science 144,2023-07-16 09:00:00,2023-07-16 10:00:00,Conference,Online,76
+EVT0145,Conference on Data Science 145,2023-01-06 13:45:00,2023-01-06 21:45:00,Webinar,London,354
+EVT0146,Workshop on Data Science 146,2024-10-19 16:45:00,2024-10-19 18:45:00,Training,Online,247
+EVT0147,Workshop on Data Science 147,2024-05-27 13:30:00,2024-05-27 21:30:00,Conference,Singapore,223
+EVT0148,Workshop on Data Science 148,2024-10-02 14:00:00,2024-10-02 15:00:00,Training,Tokyo,56
+EVT0149,Training on Data Science 149,2023-05-01 15:15:00,2023-05-01 15:45:00,Training,Tokyo,16
+EVT0150,Webinar on Data Science 150,2023-08-18 12:30:00,2023-08-18 17:30:00,Conference,Online,451
+EVT0151,Training on Data Science 151,2023-06-11 12:00:00,2023-06-11 20:00:00,Workshop,Online,270
+EVT0152,Training on Data Science 152,2024-09-17 16:30:00,2024-09-17 21:30:00,Conference,Sydney,362
+EVT0153,Conference on Data Science 153,2023-04-24 17:45:00,2023-04-24 20:45:00,Conference,Tokyo,220
+EVT0154,Workshop on Data Science 154,2023-09-25 11:30:00,2023-09-25 12:00:00,Workshop,Sydney,423
+EVT0155,Meeting on Data Science 155,2023-12-04 18:00:00,2023-12-04 20:00:00,Conference,Online,490
+EVT0156,Conference on Data Science 156,2024-07-31 17:00:00,2024-07-31 21:00:00,Meeting,Sydney,383
+EVT0157,Webinar on Data Science 157,2024-09-19 09:45:00,2024-09-19 11:15:00,Conference,New York,23
+EVT0158,Meeting on Data Science 158,2024-05-23 16:15:00,2024-05-23 20:15:00,Meeting,Tokyo,405
+EVT0159,Workshop on Data Science 159,2023-08-22 08:00:00,2023-08-22 08:30:00,Training,Sydney,445
+EVT0160,Meeting on Data Science 160,2024-01-24 18:00:00,2024-01-25 02:00:00,Conference,Singapore,397
+EVT0161,Training on Data Science 161,2024-01-22 10:45:00,2024-01-22 15:45:00,Workshop,New York,229
+EVT0162,Workshop on Data Science 162,2023-05-01 17:30:00,2023-05-01 21:30:00,Webinar,Singapore,475
+EVT0163,Training on Data Science 163,2023-03-01 11:15:00,2023-03-01 12:15:00,Conference,London,216
+EVT0164,Workshop on Data Science 164,2024-07-03 17:00:00,2024-07-03 17:30:00,Conference,New York,34
+EVT0165,Conference on Data Science 165,2023-05-10 15:15:00,2023-05-10 18:15:00,Webinar,Tokyo,313
+EVT0166,Training on Data Science 166,2024-11-01 11:30:00,2024-11-01 13:00:00,Meeting,Singapore,341
+EVT0167,Webinar on Data Science 167,2023-05-06 18:00:00,2023-05-06 19:00:00,Training,London,258
+EVT0168,Webinar on Data Science 168,2024-12-23 13:15:00,2024-12-23 19:15:00,Webinar,Online,287
+EVT0169,Webinar on Data Science 169,2023-10-27 18:15:00,2023-10-28 02:15:00,Webinar,Berlin,282
+EVT0170,Meeting on Data Science 170,2024-05-30 09:00:00,2024-05-30 13:00:00,Training,Singapore,148
+EVT0171,Workshop on Data Science 171,2023-03-22 11:15:00,2023-03-22 19:15:00,Webinar,Berlin,288
+EVT0172,Conference on Data Science 172,2023-08-04 09:30:00,2023-08-04 11:00:00,Workshop,Berlin,230
+EVT0173,Meeting on Data Science 173,2024-10-27 15:00:00,2024-10-27 15:30:00,Conference,Tokyo,147
+EVT0174,Conference on Data Science 174,2024-08-25 14:30:00,2024-08-25 15:30:00,Webinar,Online,317
+EVT0175,Meeting on Data Science 175,2024-01-29 15:00:00,2024-01-29 20:00:00,Meeting,New York,119
+EVT0176,Training on Data Science 176,2023-07-30 14:15:00,2023-07-30 19:15:00,Conference,Berlin,161
+EVT0177,Training on Data Science 177,2023-02-02 16:30:00,2023-02-02 17:00:00,Webinar,Online,469
+EVT0178,Webinar on Data Science 178,2023-09-26 17:15:00,2023-09-26 17:45:00,Training,Singapore,448
+EVT0179,Meeting on Data Science 179,2024-03-13 08:00:00,2024-03-13 16:00:00,Webinar,Online,485
+EVT0180,Webinar on Data Science 180,2024-07-01 15:45:00,2024-07-01 23:45:00,Workshop,Singapore,244
+EVT0181,Webinar on Data Science 181,2023-09-01 10:00:00,2023-09-01 13:00:00,Conference,London,399
+EVT0182,Conference on Data Science 182,2024-07-09 12:30:00,2024-07-09 17:30:00,Training,Tokyo,190
+EVT0183,Conference on Data Science 183,2023-10-03 18:30:00,2023-10-03 19:00:00,Webinar,Sydney,343
+EVT0184,Meeting on Data Science 184,2023-11-25 12:15:00,2023-11-25 18:15:00,Conference,Singapore,9
+EVT0185,Training on Data Science 185,2024-04-22 08:30:00,2024-04-22 14:30:00,Workshop,Singapore,34
+EVT0186,Webinar on Data Science 186,2024-08-16 09:30:00,2024-08-16 17:30:00,Conference,Singapore,97
+EVT0187,Workshop on Data Science 187,2023-09-22 12:30:00,2023-09-22 18:30:00,Workshop,Berlin,94
+EVT0188,Conference on Data Science 188,2023-05-31 17:00:00,2023-05-31 19:00:00,Conference,London,355
+EVT0189,Training on Data Science 189,2024-06-02 15:30:00,2024-06-02 16:00:00,Workshop,New York,492
+EVT0190,Training on Data Science 190,2023-09-23 12:00:00,2023-09-23 16:00:00,Conference,Sydney,125
+EVT0191,Meeting on Data Science 191,2023-12-25 09:00:00,2023-12-25 17:00:00,Conference,Sydney,44
+EVT0192,Meeting on Data Science 192,2023-08-31 11:30:00,2023-08-31 15:30:00,Conference,Berlin,223
+EVT0193,Training on Data Science 193,2023-10-17 10:00:00,2023-10-17 14:00:00,Webinar,Tokyo,213
+EVT0194,Training on Data Science 194,2024-10-29 13:45:00,2024-10-29 16:45:00,Conference,London,193
+EVT0195,Conference on Data Science 195,2023-02-15 12:15:00,2023-02-15 12:45:00,Training,London,418
+EVT0196,Meeting on Data Science 196,2023-11-17 16:30:00,2023-11-17 18:30:00,Training,New York,341
+EVT0197,Workshop on Data Science 197,2023-06-03 14:00:00,2023-06-03 15:00:00,Training,Sydney,299
+EVT0198,Conference on Data Science 198,2024-10-07 16:45:00,2024-10-08 00:45:00,Training,Online,31
+EVT0199,Webinar on Data Science 199,2024-09-13 15:45:00,2024-09-13 19:45:00,Workshop,Online,299
+EVT0200,Webinar on Data Science 200,2023-10-28 11:30:00,2023-10-28 13:30:00,Workshop,Singapore,166

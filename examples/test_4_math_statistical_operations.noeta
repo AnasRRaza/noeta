@@ -1,0 +1,92 @@
+# ============================================
+# Test 4: Math & Statistical Operations
+# ============================================
+# Data File: numeric_data.csv
+# Operations: Load, describe, filter, groupby on numeric data
+# ============================================
+
+load "data/numeric_data.csv" as nums
+info nums
+describe nums
+
+# SELECT NUMERIC COLUMNS
+select nums {id, value1, value2, value3} as values_only
+head values_only with n=10 as values_top
+
+select nums {id, temperature, pressure, velocity} as measurements
+head measurements with n=10 as measurements_top
+
+# FILTER OPERATIONS ON NUMERIC DATA
+filter nums where value1 > 100 as high_value1
+info high_value1
+head high_value1 with n=10 as high_v1_top
+
+filter nums where value2 > 200 as high_value2
+info high_value2
+
+filter nums where temperature > 50 as high_temp
+info high_temp
+head high_temp with n=10 as high_temp_top
+
+filter nums where pressure > 500 as high_pressure
+info high_pressure
+
+# COMBINED FILTERS
+filter nums where value1 > 100 as step1
+filter step1 where value2 > 150 as both_high
+info both_high
+
+# SORTING NUMERIC DATA
+sort nums by value1 desc as sorted_v1
+head sorted_v1 with n=15 as top15_v1
+
+sort nums by temperature asc as sorted_temp
+head sorted_temp with n=10 as lowest_temp
+
+sort nums by pressure desc as sorted_pressure
+head sorted_pressure with n=10 as highest_pressure
+
+# SAMPLING
+sample nums with n=100 as sample100
+info sample100
+describe sample100
+
+sample nums with n=50 as sample50
+info sample50
+
+# STATISTICAL AGGREGATIONS WITH GROUPBY
+# Note: We'll create bins manually by filtering ranges
+
+filter nums where value1 > 0 as v1_low
+filter nums where value1 > 100 as v1_mid
+filter nums where value1 > 200 as v1_high
+
+info v1_low
+info v1_mid
+info v1_high
+
+# COMBINED WORKFLOWS
+filter nums where value1 > 80 as filtered
+sort filtered by value2 desc as sorted_filtered
+head sorted_filtered with n=20 as top20_filtered
+
+sample filtered with n=75 as filtered_sample
+describe filtered_sample
+
+# SELECT AND ANALYZE SUBSETS
+select nums {value1, value2, temperature} as subset1
+filter subset1 where temperature > 40 as warm_subset
+info warm_subset
+
+select nums {pressure, velocity} as subset2
+filter subset2 where velocity > 10 as fast_subset
+info fast_subset
+
+# HEAD AND TAIL ON SORTED DATA
+sort nums by value3 desc as sorted_v3
+head sorted_v3 with n=25 as top25_v3
+tail sorted_v3 with n=25 as bottom25_v3
+
+# ============================================
+# Math & Statistical Operations Complete - 30 tests
+# ============================================

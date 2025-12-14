@@ -1,0 +1,123 @@
+# ============================================
+# Test 7: ML Dataset Analysis
+# ============================================
+# Data File: ml_dataset.csv
+# Operations: Load, analyze, filter, group ML data
+# ============================================
+
+load "data/ml_dataset.csv" as ml
+info ml
+describe ml
+
+# SELECT KEY FEATURES
+select ml {id, category, size, color} as categorical_features
+head categorical_features with n=15 as cat_top
+
+select ml {id, price, quantity, rating} as numeric_features
+head numeric_features with n=15 as num_top
+
+# ANALYZE BY CATEGORY
+filter ml where category == "A" as category_a
+info category_a
+head category_a with n=10 as cat_a_top
+
+filter ml where category == "B" as category_b
+info category_b
+
+filter ml where category == "C" as category_c
+info category_c
+
+# ANALYZE BY SIZE
+filter ml where size == "S" as size_small
+info size_small
+head size_small with n=10 as small_top
+
+filter ml where size == "M" as size_medium
+info size_medium
+
+filter ml where size == "L" as size_large
+info size_large
+
+# ANALYZE BY PRICE RANGES
+filter ml where price > 200 as high_price
+info high_price
+head high_price with n=10 as high_price_top
+
+filter ml where price < 100 as low_price
+info low_price
+head low_price with n=10 as low_price_top
+
+filter ml where price >= 100 as mid_high_price
+filter mid_high_price where price <= 200 as mid_price
+info mid_price
+
+# ANALYZE BY QUANTITY
+filter ml where quantity > 50 as high_quantity
+info high_quantity
+head high_quantity with n=10 as high_qty_top
+
+filter ml where quantity < 20 as low_quantity
+info low_quantity
+
+# ANALYZE BY RATING
+filter ml where rating >= 4 as high_rating
+info high_rating
+head high_rating with n=15 as high_rating_top
+
+filter ml where rating < 3 as low_rating
+info low_rating
+head low_rating with n=10 as low_rating_top
+
+# COMBINED FILTERS
+filter ml where price > 150 as step1
+filter step1 where rating >= 4 as high_price_high_rating
+info high_price_high_rating
+head high_price_high_rating with n=10 as combo_top
+
+filter ml where quantity > 30 as step2
+filter step2 where rating >= 3 as high_qty_good_rating
+info high_qty_good_rating
+
+# SORT BY DIFFERENT COLUMNS
+sort ml by price desc as sorted_by_price
+head sorted_by_price with n=15 as top15_price
+
+sort ml by quantity desc as sorted_by_quantity
+head sorted_by_quantity with n=10 as top10_quantity
+
+sort ml by rating desc as sorted_by_rating
+head sorted_by_rating with n=10 as top10_rating
+
+# SAMPLE DATA
+sample ml with n=100 as ml_sample
+describe ml_sample
+
+sample ml with n=50 as ml_small_sample
+info ml_small_sample
+
+# ANALYZE CATEGORICAL DISTRIBUTION
+select ml {id, category} as cat_only
+head cat_only with n=50 as cat_sample
+
+select ml {id, size} as size_only
+head size_only with n=50 as size_sample
+
+select ml {id, color} as color_only
+head color_only with n=50 as color_sample
+
+# ANALYZE NUMERIC RANGES
+filter ml where price > 0 as valid_price
+filter valid_price where quantity > 0 as valid_qty
+filter valid_qty where rating > 0 as all_valid
+info all_valid
+describe all_valid
+
+# FINAL VALIDATION
+select all_valid {id, category, price, quantity, rating} as final_features
+sort final_features by price desc as final_sorted
+head final_sorted with n=25 as top25_final
+tail final_sorted with n=25 as bottom25_final
+
+# ============================================
+# ML Dataset Analysis Complete - 35 tests
+# ============================================

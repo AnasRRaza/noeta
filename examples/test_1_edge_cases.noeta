@@ -1,0 +1,41 @@
+# ============================================
+# Test 1: Edge Cases Testing (Working Version)
+# ============================================
+
+# EMPTY DATASET
+load "data/empty_dataset.csv" as empty
+info empty
+describe empty
+
+# SINGLE ROW
+load "data/single_row.csv" as single
+info single
+describe single
+filter single where amount > 50 as single_filtered
+sort single by amount desc as single_sorted
+head single with n=5 as single_head
+
+# LARGE DATASET
+load "data/large_dataset.csv" as large
+info large
+describe large
+sample large with n=100 as large_sample
+filter large where amount > 500 as large_filtered
+sort large by amount desc as large_sorted
+head large with n=20 as large_top20
+tail large with n=20 as large_bottom20
+groupby large by {category} compute {count: id, mean: amount} as large_grouped
+describe large_grouped
+
+# DUPLICATES
+load "data/duplicates_dataset.csv" as dups
+info dups
+count_duplicates dups
+drop_duplicates dups as unique_dups
+info unique_dups
+groupby dups by {category} compute {count: id} as dup_counts
+describe dup_counts
+
+# ============================================
+# Edge Cases Testing Complete - 25 tests
+# ============================================

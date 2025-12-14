@@ -1,0 +1,187 @@
+# ============================================
+# Test 10: E-Commerce Analytics
+# ============================================
+# Data Files: ecommerce_transactions.csv, ecommerce_customers.csv
+# Operations: Load, analyze e-commerce transactions and customers
+# ============================================
+
+load "data/ecommerce_transactions.csv" as transactions
+load "data/ecommerce_customers.csv" as customers
+
+# ANALYZE BOTH DATASETS
+info transactions
+describe transactions
+
+info customers
+describe customers
+
+# CHECK DATA QUALITY
+count_duplicates transactions
+count_duplicates customers
+
+drop_duplicates transactions as unique_trans
+info unique_trans
+
+drop_duplicates customers as unique_custs
+info unique_custs
+
+# SELECT KEY TRANSACTION COLUMNS
+select transactions {transaction_id, customer_id, product_id, category} as trans_basic
+head trans_basic with n=20 as trans_basic_top
+
+select transactions {price, quantity, discount, order_date} as trans_details
+head trans_details with n=20 as trans_details_top
+
+# FILTER TRANSACTIONS BY PRICE
+filter transactions where price > 500 as high_value_trans
+info high_value_trans
+head high_value_trans with n=15 as high_value_top
+
+filter transactions where price < 100 as low_value_trans
+info low_value_trans
+head low_value_trans with n=15 as low_value_top
+
+filter transactions where price >= 100 as step1
+filter step1 where price <= 500 as mid_value_trans
+info mid_value_trans
+
+# FILTER BY QUANTITY
+filter transactions where quantity > 2 as multi_item_orders
+info multi_item_orders
+head multi_item_orders with n=15 as multi_item_top
+
+filter transactions where quantity == 1 as single_item_orders
+info single_item_orders
+
+# FILTER BY DISCOUNT
+filter transactions where discount > 0 as discounted_orders
+info discounted_orders
+head discounted_orders with n=15 as discount_top
+
+filter transactions where discount == 0 as full_price_orders
+info full_price_orders
+
+filter discounted_orders where discount > 20 as high_discount_orders
+info high_discount_orders
+
+# FILTER BY CATEGORY
+filter transactions where category == "Electronics" as electronics_orders
+info electronics_orders
+head electronics_orders with n=15 as elec_top
+
+filter transactions where category == "Clothing" as clothing_orders
+info clothing_orders
+head clothing_orders with n=10 as clothing_top
+
+filter transactions where category == "Home" as home_orders
+info home_orders
+
+# GROUPBY CATEGORY
+groupby transactions by {category} compute {count: transaction_id} as category_counts
+describe category_counts
+
+groupby transactions by {category} compute {sum: price} as category_revenue
+describe category_revenue
+
+# SORT TRANSACTIONS
+sort transactions by price desc as sorted_by_price
+head sorted_by_price with n=20 as top20_price
+
+sort transactions by quantity desc as sorted_by_quantity
+head sorted_by_quantity with n=15 as top15_quantity
+
+sort transactions by discount desc as sorted_by_discount
+head sorted_by_discount with n=15 as top15_discount
+
+# SAMPLE TRANSACTIONS
+sample transactions with n=200 as trans_sample
+describe trans_sample
+
+sample transactions with n=100 as trans_small_sample
+info trans_small_sample
+
+# ANALYZE CUSTOMERS
+select customers {customer_id, name, email, country} as cust_basic
+head cust_basic with n=20 as cust_basic_top
+
+select customers {customer_id, segment, lifetime_value, signup_date} as cust_metrics
+head cust_metrics with n=20 as cust_metrics_top
+
+# FILTER CUSTOMERS BY SEGMENT
+filter customers where segment == "VIP" as vip_customers
+info vip_customers
+head vip_customers with n=10 as vip_top
+
+filter customers where segment == "Regular" as regular_customers
+info regular_customers
+
+filter customers where segment == "New" as new_customers
+info new_customers
+head new_customers with n=10 as new_top
+
+# FILTER BY LIFETIME VALUE
+filter customers where lifetime_value > 5000 as high_value_customers
+info high_value_customers
+head high_value_customers with n=15 as high_ltv_top
+
+filter customers where lifetime_value < 1000 as low_value_customers
+info low_value_customers
+
+# FILTER BY COUNTRY
+filter customers where country == "USA" as usa_customers
+info usa_customers
+head usa_customers with n=15 as usa_top
+
+filter customers where country == "UK" as uk_customers
+info uk_customers
+
+filter customers where country == "Canada" as canada_customers
+info canada_customers
+
+# GROUPBY CUSTOMER SEGMENT
+groupby customers by {segment} compute {count: customer_id} as segment_counts
+describe segment_counts
+
+groupby customers by {country} compute {count: customer_id} as country_counts
+describe country_counts
+
+# SORT CUSTOMERS
+sort customers by lifetime_value desc as sorted_by_ltv
+head sorted_by_ltv with n=20 as top20_customers
+
+sort customers by signup_date desc as sorted_by_signup
+head sorted_by_signup with n=15 as newest_customers
+
+# COMBINED ANALYSIS
+filter transactions where price > 200 as step_a
+filter step_a where quantity > 1 as valuable_multi_item
+info valuable_multi_item
+head valuable_multi_item with n=20 as valuable_top
+
+filter customers where lifetime_value > 3000 as step_b
+filter step_b where segment == "VIP" as high_value_vips
+info high_value_vips
+
+# CATEGORY-SPECIFIC ANALYSIS
+filter transactions where category == "Electronics" as elec_trans
+sort elec_trans by price desc as elec_sorted
+head elec_sorted with n=15 as top_elec_orders
+
+filter transactions where category == "Books" as books_trans
+info books_trans
+head books_trans with n=10 as books_top
+
+# FINAL VALIDATION
+select transactions {transaction_id, category, price, quantity, discount} as final_trans
+sort final_trans by price desc as final_sorted
+head final_sorted with n=30 as top30_trans
+tail final_sorted with n=30 as bottom30_trans
+
+select customers {customer_id, segment, lifetime_value, country} as final_custs
+sort final_custs by lifetime_value desc as final_cust_sorted
+head final_cust_sorted with n=25 as top25_customers
+tail final_cust_sorted with n=25 as bottom25_customers
+
+# ============================================
+# E-Commerce Analytics Complete - 40 tests
+# ============================================
