@@ -1,4 +1,5 @@
 # Titanic Dataset Analysis with Noeta DSL
+# Updated to Unified Syntax v2.0
 # This script demonstrates various data analysis operations on the Titanic dataset
 
 # Load the dataset
@@ -9,65 +10,65 @@ info titanic
 describe titanic
 
 # Data Cleaning - Fill missing Age values with median age (30)
-fillna titanic with Age = 30 as titanic_clean
+fillna titanic column Age with value=30 as titanic_clean
 
 # Select specific columns for analysis
-select titanic_clean with PassengerId, Name, Sex, Age, Pclass, Survived, Fare as passengers
+select titanic_clean {PassengerId, Name, Sex, Age, Pclass, Survived, Fare} as passengers
 
 # Filter operations - Get survivors only
-filter passengers [Survived == 1] as survivors
+filter passengers where Survived == 1 as survivors
 
 # Filter by gender - Female passengers
-filter passengers [Sex == "female"] as female_passengers
+filter passengers where Sex == "female" as female_passengers
 
 # Filter by class - First class passengers
-filter passengers [Pclass == 1] as first_class
+filter passengers where Pclass == 1 as first_class
 
 # Multiple conditions - Young survivors (age < 18)
-filter survivors [Age < 18] as young_survivors
+filter survivors where Age < 18 as young_survivors
 
 # Sorting operations
-sort passengers by: Fare desc as by_fare
-sort passengers by: Age asc as by_age
+sort passengers by Fare desc as by_fare
+sort passengers by Age asc as by_age
 
 # Group by operations - Survival rate by gender
-groupby passengers by Sex as by_gender
+groupby passengers by {Sex} compute {count: PassengerId, mean: Survived} as by_gender
 
 # Survival rate by passenger class
-groupby passengers by Pclass as by_class
+groupby passengers by {Pclass} compute {count: PassengerId, mean: Survived} as by_class
 
 # Group by multiple columns - Survival by class and gender
-groupby passengers by Pclass, Sex as by_class_gender
+groupby passengers by {Pclass, Sex} compute {count: PassengerId, mean: Survived} as by_class_gender
 
 # Statistical analysis
 summary passengers
 
 # Get quantiles for Age and Fare
-quantile passengers column: Age q: 0.75
-quantile passengers column: Fare q: 0.75
+quantile passengers column Age with q=0.75
+quantile passengers column Fare with q=0.75
 
 # Detect outliers in Fare column
-outliers passengers method: iqr columns: {Fare}
+outliers passengers with method=iqr columns {Fare}
 
 # Create age groups using binning
-binning passengers column: Age bins: 5 as age_groups
+binning passengers column Age with bins=5 as age_groups
 
 # Normalize Fare column for comparison
-normalize passengers columns: {Fare} method: zscore as normalized_fare
+normalize passengers columns {Fare} with method=zscore as normalized_fare
 
 # Sample data - Get random 10 passengers
-sample passengers n: 10 random as sample_data
+sample passengers with n=10 random as sample_data
 
 # Visualizations
 
 # Box plot - Age distribution by passenger class
-boxplot passengers columns: {Age, Pclass}
+boxplot passengers columns {Age, Pclass}
 
 # Correlation heatmap
-heatmap passengers columns: {Age, Fare, Pclass}
+heatmap passengers columns {Age, Fare, Pclass}
 
 # Pairplot for numeric variables
-pairplot passengers columns: {Age, Fare, Pclass}
+pairplot passengers columns {Age, Fare, Pclass}
 
 # Pie chart - Survival distribution
-pie passengers values: Survived labels: PassengerId
+pie passengers with values=Survived labels=PassengerId

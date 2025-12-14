@@ -140,7 +140,6 @@ class Parser:
         elif token.type == TokenType.PARSE_DATETIME:
             return self.parse_parse_datetime()
         elif token.type == TokenType.EXTRACT:
-            # UNIFIED SYNTAX v2.0: Consolidated extract operation
             return self.parse_extract()
         elif token.type == TokenType.EXTRACT_YEAR:
             return self.parse_extract_year()
@@ -423,18 +422,7 @@ class Parser:
             raise SyntaxError(f"Unexpected token: {token.type}")
     
     def parse_load(self) -> LoadNode:
-        """
-        UNIFIED SYNTAX v2.0: Consolidated load operation
-
-        Supports all formats with auto-detection or explicit specification:
-        - load "data.csv" as sales                          # Auto-detect from extension
-        - load "data.json" as users                         # Auto-detect JSON
-        - load "file" with format="csv" as data             # Explicit format
-        - load "query" with format="sql" connection="db.sqlite" as data
-        - load "data.csv" with sep=";" header=true as data  # With parameters
-
-        Replaces: load_csv, load_json, load_excel, load_parquet, load_sql
-        """
+        """Parse: load <file> [with format=<fmt> <params>] as <alias>"""
         self.expect(TokenType.LOAD)
         filepath = self.expect(TokenType.STRING_LITERAL).value
 
@@ -923,16 +911,7 @@ class Parser:
         return SelectNode(source, columns, new_alias)
     
     def parse_filter(self) -> UpdatedFilterNode:
-        """
-        UNIFIED SYNTAX v2.0: Supports rich where clause
-        Examples:
-        - filter sales where price > 100 as expensive
-        - filter sales where price between 50 and 200 as mid_range
-        - filter sales where category in ["A", "B", "C"] as selected
-        - filter text where description contains "premium" as premium
-        - filter data where discount is null as no_discount
-        - filter sales where price > 100 and quantity < 10 as edge_cases
-        """
+        """Parse: filter <source> where <condition> as <alias>"""
         self.expect(TokenType.FILTER)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.WHERE)
@@ -1073,132 +1052,64 @@ class Parser:
             raise SyntaxError(f"Expected comparison operator or keyword after column '{column}', got {self.current_token()}")
     
     def parse_sort(self) -> SortNode:
-        """
-        UNIFIED SYNTAX v2.0: Supports both syntaxes
-        - Unified: sort df by column desc as sorted
-        - Legacy: sort df by: column desc as sorted
-        """
+        """Parse: sort <source> by <column> [desc|asc] as <alias>"""
         self.expect(TokenType.SORT)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.BY)
-
-        # Optional colon for legacy syntax
-        if self.match(TokenType.COLON):
-            self.advance()
-
         sort_specs = self.parse_sort_specs()
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return SortNode(source, sort_specs, new_alias)
     
     def parse_join(self) -> JoinNode:
+        """Parse: join <df1> with <df2> on <column> as <alias>"""
         self.expect(TokenType.JOIN)
         alias1 = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.WITH)
-        self.expect(TokenType.COLON)
         alias2 = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.ON)
-        self.expect(TokenType.COLON)
         join_column = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return JoinNode(alias1, alias2, join_column, new_alias)
     
     def parse_groupby(self) -> GroupByNode:
-        """
-        UNIFIED SYNTAX v2.0: Supports new syntax without colons
-        - Unified: groupby df by {cols} compute {funcs} as alias
-        - Legacy: groupby df by: {cols} agg: {funcs} as alias (still supported)
-        - Natural: groupby df by col as alias (no aggregation)
-        """
+        """Parse: groupby <source> by {cols} compute {funcs} as <alias>"""
         self.expect(TokenType.GROUPBY)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.BY)
 
-        # Detect syntax variant
-        if self.match(TokenType.COLON):
-            # Legacy syntax: by: {cols}
-            self.advance()
+        # Parse group columns (with braces or natural)
+        if self.match(TokenType.LBRACE):
             group_columns = self.parse_column_list()
-
-            # Check for agg: or compute
-            if self.match(TokenType.AGG):
-                self.advance()
-                self.expect(TokenType.COLON)
-                aggregations = self.parse_aggregations()
-            elif self.match(TokenType.COMPUTE):
-                self.advance()
-                aggregations = self.parse_aggregations()
-            else:
-                aggregations = []
-        elif self.match(TokenType.LBRACE):
-            # UNIFIED SYNTAX: by {cols} compute {funcs}
-            group_columns = self.parse_column_list()
-
-            # Expect compute keyword (new unified syntax)
-            if self.match(TokenType.COMPUTE):
-                self.advance()
-                aggregations = self.parse_aggregations()
-            elif self.match(TokenType.AGG):
-                # Legacy agg still supported
-                self.advance()
-                if self.match(TokenType.COLON):
-                    self.advance()
-                aggregations = self.parse_aggregations()
-            else:
-                aggregations = []
         else:
             # Natural syntax: by col or by col1, col2
             group_columns = self.parse_column_list_natural()
 
-            # Aggregation is optional
-            aggregations = []
-            if self.match(TokenType.COMPUTE):
-                self.advance()
-                aggregations = self.parse_aggregations()
-            elif self.match(TokenType.AGG):
-                self.advance()
-                self.expect(TokenType.COLON)
-                aggregations = self.parse_aggregations()
+        # Parse aggregations (optional)
+        aggregations = []
+        if self.match(TokenType.COMPUTE):
+            self.advance()
+            aggregations = self.parse_aggregations()
 
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return GroupByNode(source, group_columns, aggregations, new_alias)
     
     def parse_sample(self) -> SampleNode:
-        """
-        UNIFIED SYNTAX v2.0: Supports both syntaxes
-        - Unified: sample df with n=10 random as sampled
-        - Legacy: sample df n: 10 random as sampled
-        """
+        """Parse: sample <source> with n=<num> [random] as <alias>"""
         self.expect(TokenType.SAMPLE)
         source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.N)
+        self.expect(TokenType.ASSIGN)
+        size = int(self.parse_value())
 
+        # Check for random flag
         is_random = False
-        size = 0
-
-        if self.match(TokenType.WITH):
-            # UNIFIED SYNTAX: with n=10
+        if self.match(TokenType.RANDOM):
+            is_random = True
             self.advance()
-
-            # Expect n=value (n is a keyword token, not identifier)
-            self.expect(TokenType.N)
-            self.expect(TokenType.ASSIGN)
-            size = int(self.parse_value())
-
-            # Check for random flag
-            if self.match(TokenType.RANDOM):
-                is_random = True
-                self.advance()
-        else:
-            # LEGACY SYNTAX: n: 10
-            self.expect(TokenType.N)
-            self.expect(TokenType.COLON)
-            size = int(self.expect(TokenType.NUMERIC_LITERAL).value)
-
-            if self.match(TokenType.RANDOM):
-                is_random = True
-                self.advance()
 
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
@@ -1217,19 +1128,7 @@ class Parser:
         return DropNANode(source, columns, new_alias)
     
     def parse_fillna(self) -> FillNANode:
-        """
-        UNIFIED SYNTAX v2.0: Consolidated fillna operation
-
-        Supports all filling strategies:
-        - fillna data column age with value=0 as filled
-        - fillna data column age with method="mean" as filled
-        - fillna data column age with method="median" as filled
-        - fillna data column age with method="forward" as filled (ffill)
-        - fillna data column age with method="backward" as filled (bfill)
-        - fillna data column age with method="mode" as filled
-
-        Replaces: fill_mean, fill_median, fill_forward, fill_backward, fill_mode
-        """
+        """Parse: fillna <source> column <col> with value=<val>|method=<method> as <alias>"""
         self.expect(TokenType.FILLNA)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.COLUMN)
@@ -1241,22 +1140,19 @@ class Parser:
         fill_value = None
         method = None
 
-        # Check if it's value= or method=
-        if not self.match(TokenType.IDENTIFIER):
-            raise SyntaxError("Expected 'value' or 'method' after 'with'")
-
-        param_name = self.current_token().value
-        self.advance()
-        self.expect(TokenType.ASSIGN)
-
-        if param_name == 'value':
-            # Literal fill value
+        # Check if it's value= or method= (both are keywords in lexer)
+        if self.match(TokenType.VALUE):
+            # value= syntax
+            self.advance()
+            self.expect(TokenType.ASSIGN)
             fill_value = self.parse_value()
-        elif param_name == 'method':
-            # Method-based filling (mean, median, forward, backward, mode)
+        elif self.match(TokenType.METHOD):
+            # method= syntax
+            self.advance()
+            self.expect(TokenType.ASSIGN)
             method = self.parse_value()
         else:
-            raise SyntaxError(f"Expected 'value' or 'method', got '{param_name}'")
+            raise SyntaxError("Expected 'value' or 'method' after 'with'")
 
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
@@ -1278,25 +1174,26 @@ class Parser:
         return MutateNode(source, mutations, new_alias)
     
     def parse_apply(self) -> ApplyNode:
+        """Parse: apply <source> columns {cols} with function=<expr> as <alias>"""
         self.expect(TokenType.APPLY)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.COLUMNS)
-        self.expect(TokenType.COLON)
         columns = self.parse_column_list()
+        self.expect(TokenType.WITH)
         self.expect(TokenType.FUNCTION)
-        self.expect(TokenType.COLON)
+        self.expect(TokenType.ASSIGN)
         function_expr = self.expect(TokenType.STRING_LITERAL).value
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return ApplyNode(source, columns, function_expr, new_alias)
     
     def parse_describe(self) -> DescribeNode:
+        """Parse: describe <source> [columns {cols}]"""
         self.expect(TokenType.DESCRIBE)
         source = self.expect(TokenType.IDENTIFIER).value
         columns = None
         if self.match(TokenType.COLUMNS):
             self.advance()
-            self.expect(TokenType.COLON)
             columns = self.parse_column_list()
         return DescribeNode(source, columns)
     
@@ -1311,71 +1208,70 @@ class Parser:
         return InfoNode(source)
     
     def parse_outliers(self) -> OutliersNode:
+        """Parse: outliers <source> with method=<method> columns {cols}"""
         self.expect(TokenType.OUTLIERS)
         source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
         self.expect(TokenType.METHOD)
-        self.expect(TokenType.COLON)
-        method = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.ASSIGN)
+        method = self.parse_value()
         self.expect(TokenType.COLUMNS)
-        self.expect(TokenType.COLON)
         columns = self.parse_column_list()
         return OutliersNode(source, method, columns)
     
     def parse_quantile(self) -> QuantileNode:
+        """Parse: quantile <source> column <col> with q=<value>"""
         self.expect(TokenType.QUANTILE)
         source = self.expect(TokenType.IDENTIFIER).value
-        # Accept either 'column:' or 'columns:'
-        if self.match(TokenType.COLUMN, TokenType.COLUMNS):
-            self.advance()
-            self.expect(TokenType.COLON)
+        self.expect(TokenType.COLUMN)
         column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
         self.expect(TokenType.Q)
-        self.expect(TokenType.COLON)
-        q_value = float(self.expect(TokenType.NUMERIC_LITERAL).value)
+        self.expect(TokenType.ASSIGN)
+        q_value = float(self.parse_value())
         return QuantileNode(source, column, q_value)
     
     def parse_normalize(self) -> NormalizeNode:
+        """Parse: normalize <source> columns {cols} with method=<method> as <alias>"""
         self.expect(TokenType.NORMALIZE)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.COLUMNS)
-        self.expect(TokenType.COLON)
         columns = self.parse_column_list()
+        self.expect(TokenType.WITH)
         self.expect(TokenType.METHOD)
-        self.expect(TokenType.COLON)
-        method = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.ASSIGN)
+        method = self.parse_value()
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return NormalizeNode(source, columns, method, new_alias)
     
     def parse_binning(self) -> BinningNode:
+        """Parse: binning <source> column <col> with bins=<num> as <alias>"""
         self.expect(TokenType.BINNING)
         source = self.expect(TokenType.IDENTIFIER).value
-        # Accept either 'column:' or 'columns:'
-        if self.match(TokenType.COLUMN, TokenType.COLUMNS):
-            self.advance()
-            self.expect(TokenType.COLON)
+        self.expect(TokenType.COLUMN)
         column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
         self.expect(TokenType.BINS)
-        self.expect(TokenType.COLON)
-        num_bins = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+        self.expect(TokenType.ASSIGN)
+        num_bins = int(self.parse_value())
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return BinningNode(source, column, num_bins, new_alias)
     
     def parse_rolling(self) -> RollingNode:
+        """Parse: rolling <source> column <col> with window=<num> function=<func> as <alias>"""
         self.expect(TokenType.ROLLING)
         source = self.expect(TokenType.IDENTIFIER).value
-        # Accept either 'column:' or 'columns:'
-        if self.match(TokenType.COLUMN, TokenType.COLUMNS):
-            self.advance()
-            self.expect(TokenType.COLON)
+        self.expect(TokenType.COLUMN)
         column = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
         self.expect(TokenType.WINDOW)
-        self.expect(TokenType.COLON)
-        window = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+        self.expect(TokenType.ASSIGN)
+        window = int(self.parse_value())
         self.expect(TokenType.FUNCTION)
-        self.expect(TokenType.COLON)
-        function = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.ASSIGN)
+        function = self.parse_value()
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return RollingNode(source, column, window, function, new_alias)
@@ -1396,10 +1292,7 @@ class Parser:
     
     def parse_boxplot(self) -> BoxPlotNode:
         """
-        UNIFIED SYNTAX v2.0: Supports multiple syntaxes
-        - Unified: boxplot df columns {col1, col2}
-        - Classic: boxplot df columns: {col1, col2} (legacy)
-        - Natural: boxplot df with col by group_col
+        Parse: boxplot <source> columns {cols} OR boxplot <source> with <col> by <group_col>
         """
         self.expect(TokenType.BOXPLOT)
         source = self.expect(TokenType.IDENTIFIER).value
@@ -1419,11 +1312,8 @@ class Parser:
                 self.advance()
                 group_column = self.expect(TokenType.IDENTIFIER).value
         elif self.match(TokenType.COLUMNS):
-            # Unified/Classic syntax: boxplot df columns {cols} or columns: {cols}
+            # Unified syntax: boxplot df columns {cols}
             self.advance()
-            # Optional colon for legacy syntax
-            if self.match(TokenType.COLON):
-                self.advance()
             columns = self.parse_column_list()
         else:
             raise SyntaxError(f"Expected 'with' or 'columns' after boxplot source")
@@ -1431,18 +1321,18 @@ class Parser:
         return BoxPlotNode(source, columns, value_column, group_column)
     
     def parse_heatmap(self) -> HeatmapNode:
+        """Parse: heatmap <source> columns {cols}"""
         self.expect(TokenType.HEATMAP)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.COLUMNS)
-        self.expect(TokenType.COLON)
         columns = self.parse_column_list()
         return HeatmapNode(source, columns)
-    
+
     def parse_pairplot(self) -> PairPlotNode:
+        """Parse: pairplot <source> columns {cols}"""
         self.expect(TokenType.PAIRPLOT)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.COLUMNS)
-        self.expect(TokenType.COLON)
         columns = self.parse_column_list()
         return PairPlotNode(source, columns)
     
@@ -1458,28 +1348,20 @@ class Parser:
         return TimeSeriesNode(source, x_column, y_column)
     
     def parse_pie(self) -> PieChartNode:
+        """Parse: pie <source> with values=<col> labels=<col>"""
         self.expect(TokenType.PIE)
         source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WITH)
         self.expect(TokenType.VALUES)
-        self.expect(TokenType.COLON)
+        self.expect(TokenType.ASSIGN)
         values_column = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.LABELS)
-        self.expect(TokenType.COLON)
+        self.expect(TokenType.ASSIGN)
         labels_column = self.expect(TokenType.IDENTIFIER).value
         return PieChartNode(source, values_column, labels_column)
     
     def parse_save(self) -> SaveNode:
-        """
-        UNIFIED SYNTAX v2.0: Consolidated save operation
-
-        Supports all formats with auto-detection or explicit specification:
-        - save data to "output.csv"                        # Auto-detect from extension
-        - save data to "output.json"                       # Auto-detect JSON
-        - save data to "file" with format="csv"            # Explicit format
-        - save data to "output.csv" with sep=";" index=false  # With parameters
-
-        Replaces: save_csv, save_json, save_excel, save_parquet
-        """
+        """Parse: save <source> to <file> [with format=<fmt> <params>]"""
         self.expect(TokenType.SAVE)
         source_alias = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.TO)
@@ -1900,7 +1782,7 @@ class Parser:
         return result
 
     # ============================================================
-    # UNIFIED SYNTAX v2.0: EXPRESSION AND PARAMETER PARSERS
+    # EXPRESSION AND PARAMETER PARSERS
     # ============================================================
 
     def parse_expression(self) -> 'ExpressionNode':
@@ -3707,25 +3589,7 @@ class Parser:
         return ExtractQuarterNode(source, column, new_alias)
 
     def parse_extract(self) -> 'ExtractNode':
-        """
-        UNIFIED SYNTAX v2.0: Consolidated date extraction operation
-
-        Supports all date/time components with a single operation:
-        - extract data column timestamp with part="year" as year
-        - extract data column timestamp with part="month" as month
-        - extract data column timestamp with part="day" as day
-        - extract data column timestamp with part="hour" as hour
-        - extract data column timestamp with part="minute" as minute
-        - extract data column timestamp with part="second" as second
-        - extract data column timestamp with part="dayofweek" as dow
-        - extract data column timestamp with part="dayofyear" as doy
-        - extract data column timestamp with part="weekofyear" as woy
-        - extract data column timestamp with part="quarter" as q
-
-        Replaces: extract_year, extract_month, extract_day, extract_hour,
-                  extract_minute, extract_second, extract_dayofweek,
-                  extract_dayofyear, extract_weekofyear, extract_quarter
-        """
+        """Parse: extract <source> column <col> with part=<part> as <alias>"""
         from noeta_ast import ExtractNode
 
         self.expect(TokenType.EXTRACT)

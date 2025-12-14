@@ -1,54 +1,57 @@
 # Advanced Titanic Analysis - Feature Engineering and Deep Dive
+# Updated to Unified Syntax v2.0
 
 # Load the dataset
 load "data/titanic.csv" as titanic
 
 # Data preparation
-fillna titanic with Age = 30 as titanic_clean
-fillna titanic_clean with Fare = 0 as data
+fillna titanic column Age with value=30 as titanic_clean
+fillna titanic_clean column Fare with value=0 as data
 
 # Create derived features using mutate
-mutate data with FamilySize = SibSp + Parch as with_family
-mutate with_family with IsAlone = FamilySize == 0 as enriched
+# Note: Mutate with arithmetic expressions requires expression parser (Phase 4)
+# For now, we'll use the data directly
+# mutate data with FamilySize = SibSp + Parch as with_family
+# mutate with_family with IsAlone = FamilySize == 0 as enriched
 
-# Analyze survival by family size
-groupby enriched by FamilySize as by_family_size
+# Analyze survival by passenger class (using data instead of enriched)
+groupby data by {Pclass} compute {count: PassengerId, mean: Survived} as by_pclass
 
 # Fare analysis - Create fare categories
-binning enriched column: Fare bins: 4 as fare_categories
+binning data column Fare with bins=4 as fare_categories
 
 # Age groups analysis
-binning enriched column: Age bins: 5 as age_categories
+binning data column Age with bins=5 as age_categories
 
 # Filter different passenger segments
-filter enriched [Pclass == 1] as first_class
-filter first_class [Survived == 1] as first_class_survivors
-filter enriched [Pclass == 3] as third_class
-filter third_class [Survived == 0] as third_class_casualties
+filter data where Pclass == 1 as first_class
+filter first_class where Survived == 1 as first_class_survivors
+filter data where Pclass == 3 as third_class
+filter third_class where Survived == 0 as third_class_casualties
 
 # Statistical deep dive
 summary first_class_survivors
 summary third_class_casualties
 
 # Normalize Age and Fare for comparison
-normalize enriched columns: {Age, Fare} method: zscore as normalized_data
+normalize data columns {Age, Fare} with method=zscore as normalized_data
 
 # Outlier detection for ticket prices
-outliers enriched method: iqr columns: {Fare}
+outliers data with method=iqr columns {Fare}
 
 # Rolling statistics (if there's a sequence)
-sort enriched by: PassengerId asc as ordered
-rolling ordered column: Age window: 10 function: mean as rolling_avg
+sort data by PassengerId asc as ordered
+rolling ordered column Age with window=10 function=mean as rolling_avg
 
 # Get specific quantiles for detailed analysis
-quantile enriched column: Age q: 0.75
-quantile enriched column: Fare q: 0.75
+quantile data column Age with q=0.75
+quantile data column Fare with q=0.75
 
 # Sample for quick inspection
-sample enriched n: 20 random as sample_passengers
+sample data with n=20 random as sample_passengers
 
 # Comprehensive visualizations
-heatmap enriched columns: {Age, Fare, Pclass}
-pairplot enriched columns: {Age, Fare, Pclass}
-boxplot enriched columns: {Fare, Pclass}
-pie enriched values: Survived labels: PassengerId
+heatmap data columns {Age, Fare, Pclass}
+pairplot data columns {Age, Fare, Pclass}
+boxplot data columns {Fare, Pclass}
+pie data with values=Survived labels=PassengerId
