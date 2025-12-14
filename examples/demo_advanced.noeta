@@ -1,33 +1,39 @@
 # Advanced Noeta Demo Script
-# This demonstrates more complex analysis features
+# This demonstrates more complex analysis features using Unified Syntax v2.0
 
-# Load and prepare data
+# Load and prepare data (unified syntax with auto-detection)
 load "data/sales_data.csv" as sales
-load "data/customers.csv" as customers
 
 # Data cleaning
 dropna sales as clean_sales
-fillna customers value: "Unknown" columns: {city} as complete_customers
 
-# Join datasets
-join clean_sales with: complete_customers on: customer_id as sales_customers
+# Basic statistics before processing
+describe clean_sales
 
-# Complex transformations
-mutate sales_customers {total_amount: "price * quantity", discount_rate: "discount / 100"} as enhanced_data
+# Sampling and filtering (unified syntax: with for parameters, where for conditions)
+sample clean_sales with n=10 random as sample_data
+filter sample_data where price > 50 as high_value_sales
 
-# Sampling and filtering
-sample enhanced_data n: 15 random as sample_data
-filter sample_data [total_amount > 100] as high_value_sales
+# Aggregation by category (unified syntax: by without colon, compute instead of agg)
+groupby high_value_sales by {category} compute {sum: price, mean: quantity, count: product_id} as category_summary
+
+# Display aggregation results
+info category_summary
+describe category_summary
+
+# Sorting the high value sales (unified syntax: by without colon)
+sort high_value_sales by price desc as sorted_sales
+
+# Display top results
+head sorted_sales with n=5 as top_sales
+summary top_sales
 
 # Statistical analysis
-normalize high_value_sales columns: {price, quantity} method: zscore as normalized_sales
-outliers normalized_sales method: iqr columns: {price}
-quantile high_value_sales column: total_amount q: 0.95
+describe top_sales
 
-# Advanced visualizations
-heatmap normalized_sales columns: {price, quantity}
-timeseries enhanced_data x: date y: total_amount
+# Visualization
+boxplot high_value_sales columns {price, quantity}
 
-# Export results
-save high_value_sales to: "output/high_value_sales.csv" format: csv
-export_plot filename: "output/analysis_plots.png" width: 1200 height: 800
+# Export results (unified syntax with auto-detection)
+save category_summary to "output/category_summary.csv"
+save top_sales to "output/top_sales.csv"

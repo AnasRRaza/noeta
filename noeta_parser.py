@@ -139,6 +139,9 @@ class Parser:
         # Date operations
         elif token.type == TokenType.PARSE_DATETIME:
             return self.parse_parse_datetime()
+        elif token.type == TokenType.EXTRACT:
+            # UNIFIED SYNTAX v2.0: Consolidated extract operation
+            return self.parse_extract()
         elif token.type == TokenType.EXTRACT_YEAR:
             return self.parse_extract_year()
         elif token.type == TokenType.EXTRACT_MONTH:
@@ -420,11 +423,65 @@ class Parser:
             raise SyntaxError(f"Unexpected token: {token.type}")
     
     def parse_load(self) -> LoadNode:
+        """
+        UNIFIED SYNTAX v2.0: Consolidated load operation
+
+        Supports all formats with auto-detection or explicit specification:
+        - load "data.csv" as sales                          # Auto-detect from extension
+        - load "data.json" as users                         # Auto-detect JSON
+        - load "file" with format="csv" as data             # Explicit format
+        - load "query" with format="sql" connection="db.sqlite" as data
+        - load "data.csv" with sep=";" header=true as data  # With parameters
+
+        Replaces: load_csv, load_json, load_excel, load_parquet, load_sql
+        """
         self.expect(TokenType.LOAD)
-        file_path = self.expect(TokenType.STRING_LITERAL).value
+        filepath = self.expect(TokenType.STRING_LITERAL).value
+
+        # Parse optional WITH clause for format and parameters
+        format_type = None
+        params = None
+
+        if self.match(TokenType.WITH):
+            self.advance()
+            params = {}
+
+            # Parse parameters until we hit AS
+            while not self.match(TokenType.AS):
+                if not self.current_token():
+                    raise SyntaxError("Expected AS after load parameters")
+
+                if not self.match(TokenType.IDENTIFIER):
+                    raise SyntaxError(f"Expected parameter name in WITH clause")
+
+                param_name = self.current_token().value
+                self.advance()
+                self.expect(TokenType.ASSIGN)
+                param_value = self.parse_value()
+
+                # Special handling for 'format' parameter
+                if param_name == 'format':
+                    format_type = param_value
+                else:
+                    params[param_name] = param_value
+
+        # Auto-detect format from file extension if not explicitly specified
+        if format_type is None:
+            filepath_lower = filepath.lower()
+            if filepath_lower.endswith('.csv'):
+                format_type = 'csv'
+            elif filepath_lower.endswith('.json'):
+                format_type = 'json'
+            elif filepath_lower.endswith(('.xlsx', '.xls')):
+                format_type = 'excel'
+            elif filepath_lower.endswith('.parquet'):
+                format_type = 'parquet'
+            # For SQL, format must be explicitly specified
+
         self.expect(TokenType.AS)
         alias = self.expect(TokenType.IDENTIFIER).value
-        return LoadNode(file_path, alias)
+
+        return LoadNode(filepath, alias, format_type, params)
 
     def parse_load_enhanced(self):
         """
@@ -865,37 +922,170 @@ class Parser:
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return SelectNode(source, columns, new_alias)
     
-    def parse_filter(self) -> FilterNode:
+    def parse_filter(self) -> UpdatedFilterNode:
         """
-        Supports:
-        - Classic: filter df [col == val] as alias
-        - Natural: filter df where col = val as alias
+        UNIFIED SYNTAX v2.0: Supports rich where clause
+        Examples:
+        - filter sales where price > 100 as expensive
+        - filter sales where price between 50 and 200 as mid_range
+        - filter sales where category in ["A", "B", "C"] as selected
+        - filter text where description contains "premium" as premium
+        - filter data where discount is null as no_discount
+        - filter sales where price > 100 and quantity < 10 as edge_cases
         """
         self.expect(TokenType.FILTER)
         source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.WHERE)
 
-        # Detect syntax variant
-        if self.match(TokenType.WHERE):
-            # Natural syntax
-            self.advance()
-            condition = self.parse_condition_natural()
-        elif self.match(TokenType.LBRACKET):
-            # Classic syntax
-            self.advance()
-            condition = self.parse_condition()
-            self.expect(TokenType.RBRACKET)
-        else:
-            raise SyntaxError(f"Expected 'where' or '[' after filter source at {self.current_token()}")
+        # Parse rich where clause (supports all filtering modes)
+        condition = self.parse_where_clause()
 
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
-        return FilterNode(source, condition, new_alias)
+        return UpdatedFilterNode(source, condition, new_alias)
+
+    def parse_where_clause(self) -> CompoundConditionNode:
+        """
+        Parse WHERE clause with support for:
+        - Simple comparisons: price > 100
+        - Between: price between 50 and 200
+        - In: category in ["A", "B", "C"]
+        - String matching: description contains "premium"
+        - Null checks: discount is null
+        - Complex conditions: price > 100 and quantity < 10
+        """
+        return self.parse_or_condition()
+
+    def parse_or_condition(self) -> CompoundConditionNode:
+        """Parse OR conditions (lowest precedence)"""
+        left = self.parse_and_condition()
+
+        while self.match(TokenType.OR):
+            self.advance()
+            right = self.parse_and_condition()
+            left = BinaryConditionNode(left, 'or', right)
+
+        return left
+
+    def parse_and_condition(self) -> CompoundConditionNode:
+        """Parse AND conditions (higher precedence than OR)"""
+        left = self.parse_not_condition()
+
+        while self.match(TokenType.AND):
+            self.advance()
+            right = self.parse_not_condition()
+            left = BinaryConditionNode(left, 'and', right)
+
+        return left
+
+    def parse_not_condition(self) -> CompoundConditionNode:
+        """Parse NOT conditions (highest precedence)"""
+        if self.match(TokenType.NOT):
+            self.advance()
+            condition = self.parse_not_condition()  # Allow chaining: not not condition
+            return NotConditionNode(condition)
+
+        return self.parse_primary_condition()
+
+    def parse_primary_condition(self) -> CompoundConditionNode:
+        """Parse primary (atomic) conditions"""
+        # Check for parentheses
+        if self.match(TokenType.LPAREN):
+            self.advance()
+            condition = self.parse_where_clause()
+            self.expect(TokenType.RPAREN)
+            return condition
+
+        # Must start with a column name
+        if not self.match(TokenType.IDENTIFIER):
+            raise SyntaxError(f"Expected column name in condition, got {self.current_token()}")
+
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Check what kind of condition this is
+        if self.match(TokenType.BETWEEN):
+            # BETWEEN condition: column between min and max
+            self.advance()
+            min_value = self.parse_value()
+            self.expect(TokenType.AND)
+            max_value = self.parse_value()
+            return BetweenNode(column, min_value, max_value)
+
+        elif self.match(TokenType.IN):
+            # IN condition: column in [values]
+            self.advance()
+            values = self.parse_list_value()
+            return InNode(column, values)
+
+        elif self.match(TokenType.CONTAINS):
+            # String matching: column contains "pattern"
+            self.advance()
+            pattern = self.expect(TokenType.STRING_LITERAL).value
+            return StringMatchNode(column, 'contains', pattern)
+
+        elif self.match(TokenType.STARTS_WITH):
+            # String matching: column starts_with "pattern"
+            self.advance()
+            pattern = self.expect(TokenType.STRING_LITERAL).value
+            return StringMatchNode(column, 'starts_with', pattern)
+
+        elif self.match(TokenType.ENDS_WITH):
+            # String matching: column ends_with "pattern"
+            self.advance()
+            pattern = self.expect(TokenType.STRING_LITERAL).value
+            return StringMatchNode(column, 'ends_with', pattern)
+
+        elif self.match(TokenType.MATCHES):
+            # Regex matching: column matches "regex"
+            self.advance()
+            pattern = self.expect(TokenType.STRING_LITERAL).value
+            return StringMatchNode(column, 'matches', pattern)
+
+        elif self.match(TokenType.IS):
+            # Null check: column is [not] null
+            self.advance()
+            is_not = False
+            if self.match(TokenType.NOT):
+                is_not = True
+                self.advance()
+            self.expect(TokenType.NULL)
+            return NullCheckNode(column, is_not)
+
+        elif self.match(TokenType.EQ, TokenType.NEQ, TokenType.LT, TokenType.GT, TokenType.LTE, TokenType.GTE):
+            # Comparison: column op value
+            op_token = self.current_token()
+            self.advance()
+            value = self.parse_value()
+
+            # Map token types to operator strings
+            op_map = {
+                TokenType.EQ: '==',
+                TokenType.NEQ: '!=',
+                TokenType.LT: '<',
+                TokenType.GT: '>',
+                TokenType.LTE: '<=',
+                TokenType.GTE: '>='
+            }
+            operator = op_map[op_token.type]
+            return ComparisonNode(column, operator, value)
+
+        else:
+            raise SyntaxError(f"Expected comparison operator or keyword after column '{column}', got {self.current_token()}")
     
     def parse_sort(self) -> SortNode:
+        """
+        UNIFIED SYNTAX v2.0: Supports both syntaxes
+        - Unified: sort df by column desc as sorted
+        - Legacy: sort df by: column desc as sorted
+        """
         self.expect(TokenType.SORT)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.BY)
-        self.expect(TokenType.COLON)
+
+        # Optional colon for legacy syntax
+        if self.match(TokenType.COLON):
+            self.advance()
+
         sort_specs = self.parse_sort_specs()
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
@@ -916,10 +1106,10 @@ class Parser:
     
     def parse_groupby(self) -> GroupByNode:
         """
-        Supports:
-        - Classic: groupby df by: {cols} agg: {funcs} as alias
+        UNIFIED SYNTAX v2.0: Supports new syntax without colons
+        - Unified: groupby df by {cols} compute {funcs} as alias
+        - Legacy: groupby df by: {cols} agg: {funcs} as alias (still supported)
         - Natural: groupby df by col as alias (no aggregation)
-        - Natural: groupby df by col1, col2 as alias
         """
         self.expect(TokenType.GROUPBY)
         source = self.expect(TokenType.IDENTIFIER).value
@@ -927,19 +1117,46 @@ class Parser:
 
         # Detect syntax variant
         if self.match(TokenType.COLON):
-            # Classic syntax: by: {cols}
+            # Legacy syntax: by: {cols}
             self.advance()
             group_columns = self.parse_column_list()
-            self.expect(TokenType.AGG)
-            self.expect(TokenType.COLON)
-            aggregations = self.parse_aggregations()
+
+            # Check for agg: or compute
+            if self.match(TokenType.AGG):
+                self.advance()
+                self.expect(TokenType.COLON)
+                aggregations = self.parse_aggregations()
+            elif self.match(TokenType.COMPUTE):
+                self.advance()
+                aggregations = self.parse_aggregations()
+            else:
+                aggregations = []
+        elif self.match(TokenType.LBRACE):
+            # UNIFIED SYNTAX: by {cols} compute {funcs}
+            group_columns = self.parse_column_list()
+
+            # Expect compute keyword (new unified syntax)
+            if self.match(TokenType.COMPUTE):
+                self.advance()
+                aggregations = self.parse_aggregations()
+            elif self.match(TokenType.AGG):
+                # Legacy agg still supported
+                self.advance()
+                if self.match(TokenType.COLON):
+                    self.advance()
+                aggregations = self.parse_aggregations()
+            else:
+                aggregations = []
         else:
             # Natural syntax: by col or by col1, col2
             group_columns = self.parse_column_list_natural()
 
             # Aggregation is optional
             aggregations = []
-            if self.match(TokenType.AGG):
+            if self.match(TokenType.COMPUTE):
+                self.advance()
+                aggregations = self.parse_aggregations()
+            elif self.match(TokenType.AGG):
                 self.advance()
                 self.expect(TokenType.COLON)
                 aggregations = self.parse_aggregations()
@@ -949,15 +1166,40 @@ class Parser:
         return GroupByNode(source, group_columns, aggregations, new_alias)
     
     def parse_sample(self) -> SampleNode:
+        """
+        UNIFIED SYNTAX v2.0: Supports both syntaxes
+        - Unified: sample df with n=10 random as sampled
+        - Legacy: sample df n: 10 random as sampled
+        """
         self.expect(TokenType.SAMPLE)
         source = self.expect(TokenType.IDENTIFIER).value
-        self.expect(TokenType.N)
-        self.expect(TokenType.COLON)
-        size = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
         is_random = False
-        if self.match(TokenType.RANDOM):
-            is_random = True
+        size = 0
+
+        if self.match(TokenType.WITH):
+            # UNIFIED SYNTAX: with n=10
             self.advance()
+
+            # Expect n=value (n is a keyword token, not identifier)
+            self.expect(TokenType.N)
+            self.expect(TokenType.ASSIGN)
+            size = int(self.parse_value())
+
+            # Check for random flag
+            if self.match(TokenType.RANDOM):
+                is_random = True
+                self.advance()
+        else:
+            # LEGACY SYNTAX: n: 10
+            self.expect(TokenType.N)
+            self.expect(TokenType.COLON)
+            size = int(self.expect(TokenType.NUMERIC_LITERAL).value)
+
+            if self.match(TokenType.RANDOM):
+                is_random = True
+                self.advance()
+
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return SampleNode(source, size, is_random, new_alias)
@@ -975,51 +1217,51 @@ class Parser:
         return DropNANode(source, columns, new_alias)
     
     def parse_fillna(self) -> FillNANode:
+        """
+        UNIFIED SYNTAX v2.0: Consolidated fillna operation
+
+        Supports all filling strategies:
+        - fillna data column age with value=0 as filled
+        - fillna data column age with method="mean" as filled
+        - fillna data column age with method="median" as filled
+        - fillna data column age with method="forward" as filled (ffill)
+        - fillna data column age with method="backward" as filled (bfill)
+        - fillna data column age with method="mode" as filled
+
+        Replaces: fill_mean, fill_median, fill_forward, fill_backward, fill_mode
+        """
         self.expect(TokenType.FILLNA)
         source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
 
-        # Check if using WITH syntax or VALUE syntax
-        if self.match(TokenType.WITH):
-            # New syntax: fillna df with col = value
-            self.advance()
-            column_name = self.expect(TokenType.IDENTIFIER).value
-            self.expect(TokenType.ASSIGN)
+        # Parse WITH clause for value or method
+        self.expect(TokenType.WITH)
 
-            # Parse fill value (can be string or numeric)
-            token = self.current_token()
-            if token.type == TokenType.STRING_LITERAL:
-                fill_value = token.value
-            elif token.type == TokenType.NUMERIC_LITERAL:
-                fill_value = token.value
-            else:
-                raise SyntaxError(f"Expected literal value, got {token.type}")
-            self.advance()
+        fill_value = None
+        method = None
 
-            columns = [column_name]  # Single column specified
+        # Check if it's value= or method=
+        if not self.match(TokenType.IDENTIFIER):
+            raise SyntaxError("Expected 'value' or 'method' after 'with'")
+
+        param_name = self.current_token().value
+        self.advance()
+        self.expect(TokenType.ASSIGN)
+
+        if param_name == 'value':
+            # Literal fill value
+            fill_value = self.parse_value()
+        elif param_name == 'method':
+            # Method-based filling (mean, median, forward, backward, mode)
+            method = self.parse_value()
         else:
-            # Old syntax: fillna df value: X columns: {col}
-            self.expect(TokenType.VALUE)
-            self.expect(TokenType.COLON)
-
-            # Parse fill value (can be string or numeric)
-            token = self.current_token()
-            if token.type == TokenType.STRING_LITERAL:
-                fill_value = token.value
-            elif token.type == TokenType.NUMERIC_LITERAL:
-                fill_value = token.value
-            else:
-                raise SyntaxError(f"Expected literal value, got {token.type}")
-            self.advance()
-
-            columns = None
-            if self.match(TokenType.COLUMNS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                columns = self.parse_column_list()
+            raise SyntaxError(f"Expected 'value' or 'method', got '{param_name}'")
 
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
-        return FillNANode(source, fill_value, columns, new_alias)
+
+        return FillNANode(source, column, new_alias, fill_value, method)
     
     def parse_mutate(self) -> MutateNode:
         self.expect(TokenType.MUTATE)
@@ -1154,8 +1396,9 @@ class Parser:
     
     def parse_boxplot(self) -> BoxPlotNode:
         """
-        Supports:
-        - Classic: boxplot df columns: {col1, col2}
+        UNIFIED SYNTAX v2.0: Supports multiple syntaxes
+        - Unified: boxplot df columns {col1, col2}
+        - Classic: boxplot df columns: {col1, col2} (legacy)
         - Natural: boxplot df with col by group_col
         """
         self.expect(TokenType.BOXPLOT)
@@ -1176,9 +1419,11 @@ class Parser:
                 self.advance()
                 group_column = self.expect(TokenType.IDENTIFIER).value
         elif self.match(TokenType.COLUMNS):
-            # Classic syntax: boxplot df columns: {cols}
+            # Unified/Classic syntax: boxplot df columns {cols} or columns: {cols}
             self.advance()
-            self.expect(TokenType.COLON)
+            # Optional colon for legacy syntax
+            if self.match(TokenType.COLON):
+                self.advance()
             columns = self.parse_column_list()
         else:
             raise SyntaxError(f"Expected 'with' or 'columns' after boxplot source")
@@ -1224,17 +1469,63 @@ class Parser:
         return PieChartNode(source, values_column, labels_column)
     
     def parse_save(self) -> SaveNode:
+        """
+        UNIFIED SYNTAX v2.0: Consolidated save operation
+
+        Supports all formats with auto-detection or explicit specification:
+        - save data to "output.csv"                        # Auto-detect from extension
+        - save data to "output.json"                       # Auto-detect JSON
+        - save data to "file" with format="csv"            # Explicit format
+        - save data to "output.csv" with sep=";" index=false  # With parameters
+
+        Replaces: save_csv, save_json, save_excel, save_parquet
+        """
         self.expect(TokenType.SAVE)
-        source = self.expect(TokenType.IDENTIFIER).value
+        source_alias = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.TO)
-        self.expect(TokenType.COLON)
-        file_path = self.expect(TokenType.STRING_LITERAL).value
+        filepath = self.expect(TokenType.STRING_LITERAL).value
+
+        # Parse optional WITH clause for format and parameters
         format_type = None
-        if self.match(TokenType.FORMAT):
+        params = None
+
+        if self.match(TokenType.WITH):
             self.advance()
-            self.expect(TokenType.COLON)
-            format_type = self.expect(TokenType.IDENTIFIER).value
-        return SaveNode(source, file_path, format_type)
+            params = {}
+
+            # Parse parameters
+            while self.current_token() and not self.match(TokenType.EOF):
+                if not self.match(TokenType.IDENTIFIER):
+                    break
+
+                param_name = self.current_token().value
+                self.advance()
+                self.expect(TokenType.ASSIGN)
+                param_value = self.parse_value()
+
+                # Special handling for 'format' parameter
+                if param_name == 'format':
+                    format_type = param_value
+                else:
+                    params[param_name] = param_value
+
+                # Break if we've consumed all parameters
+                if not self.match(TokenType.IDENTIFIER):
+                    break
+
+        # Auto-detect format from file extension if not explicitly specified
+        if format_type is None:
+            filepath_lower = filepath.lower()
+            if filepath_lower.endswith('.csv'):
+                format_type = 'csv'
+            elif filepath_lower.endswith('.json'):
+                format_type = 'json'
+            elif filepath_lower.endswith(('.xlsx', '.xls')):
+                format_type = 'excel'
+            elif filepath_lower.endswith('.parquet'):
+                format_type = 'parquet'
+
+        return SaveNode(source_alias, filepath, format_type, params)
     
     def parse_export_plot(self) -> ExportPlotNode:
         self.expect(TokenType.EXPORT_PLOT)
@@ -1607,6 +1898,280 @@ class Parser:
 
         self.expect(TokenType.RBRACE)
         return result
+
+    # ============================================================
+    # UNIFIED SYNTAX v2.0: EXPRESSION AND PARAMETER PARSERS
+    # ============================================================
+
+    def parse_expression(self) -> 'ExpressionNode':
+        """
+        Parse DSL expressions for apply/map operations.
+        Supports:
+        - Arithmetic: value * 1.1, price + tax
+        - Logical: value > 100 and value < 200
+        - Function calls: is_numeric(value), round(value, 2)
+        - Conditionals: value * 1.1 where is_numeric(value) else value
+
+        Grammar (with precedence from lowest to highest):
+        expression     := conditional
+        conditional    := logical_or ( WHERE logical_or ELSE logical_or )?
+        logical_or     := logical_and ( OR logical_and )*
+        logical_and    := comparison ( AND comparison )*
+        comparison     := additive ( (== | != | < | > | <= | >=) additive )?
+        additive       := multiplicative ( (+ | -) multiplicative )*
+        multiplicative := power ( (* | / | %) power )*
+        power          := unary ( ** unary )*
+        unary          := (- | NOT) unary | primary
+        primary        := NUMBER | STRING | IDENTIFIER | function_call | ( expression )
+        function_call  := IDENTIFIER LPAREN ( expression ( COMMA expression )* )? RPAREN
+        """
+        return self.parse_conditional()
+
+    def parse_conditional(self) -> 'ExpressionNode':
+        """Parse conditional: expr where condition else expr"""
+        from noeta_ast import ConditionalExprNode
+
+        expr = self.parse_logical_or()
+
+        if self.match(TokenType.WHERE):
+            self.advance()
+            condition = self.parse_logical_or()
+            self.expect(TokenType.ELSE)
+            else_expr = self.parse_logical_or()
+            return ConditionalExprNode(condition, expr, else_expr)
+
+        return expr
+
+    def parse_logical_or(self) -> 'ExpressionNode':
+        """Parse logical OR: expr or expr or ..."""
+        from noeta_ast import BinaryOpNode
+
+        left = self.parse_logical_and()
+
+        while self.match(TokenType.OR):
+            self.advance()
+            right = self.parse_logical_and()
+            left = BinaryOpNode(left, 'or', right)
+
+        return left
+
+    def parse_logical_and(self) -> 'ExpressionNode':
+        """Parse logical AND: expr and expr and ..."""
+        from noeta_ast import BinaryOpNode
+
+        left = self.parse_comparison()
+
+        while self.match(TokenType.AND):
+            self.advance()
+            right = self.parse_comparison()
+            left = BinaryOpNode(left, 'and', right)
+
+        return left
+
+    def parse_comparison(self) -> 'ExpressionNode':
+        """Parse comparison: expr == expr, expr < expr, etc."""
+        from noeta_ast import BinaryOpNode
+
+        left = self.parse_additive()
+
+        if self.match(TokenType.EQ, TokenType.NEQ, TokenType.LT, TokenType.GT, TokenType.LTE, TokenType.GTE):
+            op_token = self.current_token()
+            self.advance()
+            right = self.parse_additive()
+
+            # Map token types to operator strings
+            op_map = {
+                TokenType.EQ: '==',
+                TokenType.NEQ: '!=',
+                TokenType.LT: '<',
+                TokenType.GT: '>',
+                TokenType.LTE: '<=',
+                TokenType.GTE: '>='
+            }
+            op = op_map.get(op_token.type, '==')
+            return BinaryOpNode(left, op, right)
+
+        return left
+
+    def parse_additive(self) -> 'ExpressionNode':
+        """Parse addition/subtraction: expr + expr, expr - expr"""
+        from noeta_ast import BinaryOpNode
+
+        left = self.parse_multiplicative()
+
+        while self.match(TokenType.PLUS, TokenType.MINUS):
+            op_token = self.current_token()
+            self.advance()
+            right = self.parse_multiplicative()
+            op = '+' if op_token.type == TokenType.PLUS else '-'
+            left = BinaryOpNode(left, op, right)
+
+        return left
+
+    def parse_multiplicative(self) -> 'ExpressionNode':
+        """Parse multiplication/division/modulo: expr * expr, expr / expr, expr % expr"""
+        from noeta_ast import BinaryOpNode
+
+        left = self.parse_power()
+
+        while self.match(TokenType.MULTIPLY, TokenType.DIVIDE, TokenType.MODULO):
+            op_token = self.current_token()
+            self.advance()
+            right = self.parse_power()
+
+            op_map = {
+                TokenType.MULTIPLY: '*',
+                TokenType.DIVIDE: '/',
+                TokenType.MODULO: '%'
+            }
+            op = op_map.get(op_token.type, '*')
+            left = BinaryOpNode(left, op, right)
+
+        return left
+
+    def parse_power(self) -> 'ExpressionNode':
+        """Parse exponentiation: expr ** expr"""
+        from noeta_ast import BinaryOpNode
+
+        left = self.parse_unary()
+
+        if self.match(TokenType.EXPONENT):
+            self.advance()
+            right = self.parse_power()  # Right-associative
+            return BinaryOpNode(left, '**', right)
+
+        return left
+
+    def parse_unary(self) -> 'ExpressionNode':
+        """Parse unary operators: -expr, not expr"""
+        from noeta_ast import UnaryOpNode
+
+        if self.match(TokenType.MINUS):
+            self.advance()
+            expr = self.parse_unary()
+            return UnaryOpNode('-', expr)
+
+        if self.match(TokenType.NOT):
+            self.advance()
+            expr = self.parse_unary()
+            return UnaryOpNode('not', expr)
+
+        return self.parse_primary()
+
+    def parse_primary(self) -> 'ExpressionNode':
+        """Parse primary expressions: literals, identifiers, function calls, parenthesized expressions"""
+        from noeta_ast import LiteralNode, IdentifierNode, FunctionCallNode
+
+        token = self.current_token()
+
+        # Numeric literal
+        if token.type == TokenType.NUMERIC_LITERAL:
+            self.advance()
+            return LiteralNode(token.value)
+
+        # String literal
+        if token.type == TokenType.STRING_LITERAL:
+            self.advance()
+            return LiteralNode(token.value)
+
+        # Boolean literal
+        if token.type == TokenType.BOOLEAN_LITERAL:
+            self.advance()
+            return LiteralNode(token.value.lower() == 'true')
+
+        # Null literal
+        if token.type == TokenType.NULL:
+            self.advance()
+            return LiteralNode(None)
+
+        # Identifier or function call
+        if token.type == TokenType.IDENTIFIER:
+            name = token.value
+            self.advance()
+
+            # Function call
+            if self.match(TokenType.LPAREN):
+                self.advance()
+                args = []
+
+                # Parse arguments
+                if not self.match(TokenType.RPAREN):
+                    args.append(self.parse_expression())
+
+                    while self.match(TokenType.COMMA):
+                        self.advance()
+                        args.append(self.parse_expression())
+
+                self.expect(TokenType.RPAREN)
+                return FunctionCallNode(name, args)
+
+            # Plain identifier
+            return IdentifierNode(name)
+
+        # Parenthesized expression
+        if token.type == TokenType.LPAREN:
+            self.advance()
+            expr = self.parse_expression()
+            self.expect(TokenType.RPAREN)
+            return expr
+
+        raise SyntaxError(f"Unexpected token in expression: {token}")
+
+    def parse_with_clause(self) -> dict:
+        """
+        Parse unified WITH clause for parameters.
+        Examples:
+        - with n=100
+        - with method="mean"
+        - with decimals=2 fill_value=0
+        - with transform value * 1.1
+        - with mapping {"A": 1, "B": 2}
+
+        Returns dict of parameter name -> value
+        """
+        params = {}
+
+        if not self.match(TokenType.WITH):
+            return params
+
+        self.advance()  # consume WITH
+
+        # Special case: transform parameter (for apply/map)
+        if self.match(TokenType.TRANSFORM):
+            self.advance()
+            params['transform'] = self.parse_expression()
+            return params
+
+        # Standard key=value parameters
+        while True:
+            # Check if we've reached the end (AS, WHERE, etc.)
+            if self.match(TokenType.AS, TokenType.WHERE, TokenType.BY, TokenType.COMPUTE):
+                break
+
+            # Check for end of tokens
+            if not self.current_token():
+                break
+
+            # Expect parameter name
+            if not self.match(TokenType.IDENTIFIER):
+                break
+
+            param_name = self.current_token().value
+            self.advance()
+
+            # Expect equals sign
+            if not self.match(TokenType.ASSIGN):
+                raise SyntaxError(f"Expected '=' after parameter name '{param_name}'")
+            self.advance()
+
+            # Parse parameter value
+            params[param_name] = self.parse_value()
+
+            # If no more parameters, break
+            if not self.match(TokenType.IDENTIFIER):
+                break
+
+        return params
 
     # ============================================================
     # PHASE 4: TRANSFORMATION OPERATIONS - PARSERS
@@ -3140,6 +3705,44 @@ class Parser:
         self.expect(TokenType.AS)
         new_alias = self.expect(TokenType.IDENTIFIER).value
         return ExtractQuarterNode(source, column, new_alias)
+
+    def parse_extract(self) -> 'ExtractNode':
+        """
+        UNIFIED SYNTAX v2.0: Consolidated date extraction operation
+
+        Supports all date/time components with a single operation:
+        - extract data column timestamp with part="year" as year
+        - extract data column timestamp with part="month" as month
+        - extract data column timestamp with part="day" as day
+        - extract data column timestamp with part="hour" as hour
+        - extract data column timestamp with part="minute" as minute
+        - extract data column timestamp with part="second" as second
+        - extract data column timestamp with part="dayofweek" as dow
+        - extract data column timestamp with part="dayofyear" as doy
+        - extract data column timestamp with part="weekofyear" as woy
+        - extract data column timestamp with part="quarter" as q
+
+        Replaces: extract_year, extract_month, extract_day, extract_hour,
+                  extract_minute, extract_second, extract_dayofweek,
+                  extract_dayofyear, extract_weekofyear, extract_quarter
+        """
+        from noeta_ast import ExtractNode
+
+        self.expect(TokenType.EXTRACT)
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Parse WITH clause for part parameter
+        self.expect(TokenType.WITH)
+        self.expect(TokenType.PART)
+        self.expect(TokenType.ASSIGN)
+        part = self.parse_value()  # String value like "year", "month", etc.
+
+        self.expect(TokenType.AS)
+        new_alias = self.expect(TokenType.IDENTIFIER).value
+
+        return ExtractNode(source, column, part, new_alias)
 
     # Date Arithmetic Operations
     def parse_date_add(self) -> 'DateAddNode':

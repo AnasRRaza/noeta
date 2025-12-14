@@ -1,7 +1,7 @@
 # Advanced Titanic Analysis - Feature Engineering and Deep Dive
 
 # Load the dataset
-load "titanic.csv" as titanic
+load "data/titanic.csv" as titanic
 
 # Data preparation
 fillna titanic with Age = 30 as titanic_clean

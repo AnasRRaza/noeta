@@ -14,65 +14,114 @@ class ASTNode:
 class ProgramNode(ASTNode):
     statements: List[ASTNode]
 
-# Data Manipulation Nodes
+# =============================================================================
+# UNIFIED SYNTAX v2.0: CONSOLIDATED I/O OPERATIONS
+# =============================================================================
+
 @dataclass
 class LoadNode(ASTNode):
-    file_path: str
-    alias: str
+    """
+    Unified load operation supporting all formats (csv, json, excel, parquet, sql).
+    Format auto-detected from file extension or explicitly specified.
 
-# Enhanced Load Nodes with parameters
+    Replaces: LoadCSVNode, LoadJSONNode, LoadExcelNode, LoadParquetNode, LoadSQLNode
+
+    Examples:
+    - load "data.csv" as sales                          # Auto-detect CSV
+    - load "data.json" as users                         # Auto-detect JSON
+    - load "file" with format="csv" as data             # Explicit format
+    - load "query" with format="sql" connection="db.sqlite" as data
+    - load "data.csv" with sep=";" header=true as data  # With parameters
+    """
+    filepath: str
+    alias: str
+    format: Optional[str] = None  # Auto-detect if None (csv, json, excel, parquet, sql)
+    params: Optional[dict] = None  # Optional parameters (sep, header, connection, etc.)
+
+@dataclass
+class SaveNode(ASTNode):
+    """
+    Unified save operation supporting all formats (csv, json, excel, parquet).
+    Format detected from file extension or explicitly specified.
+
+    Replaces: SaveCSVNode, SaveJSONNode, SaveExcelNode, SaveParquetNode
+
+    Examples:
+    - save data to "output.csv"                         # Auto-detect CSV
+    - save data to "output.json"                        # Auto-detect JSON
+    - save data to "file" with format="csv"             # Explicit format
+    - save data to "output.csv" with sep=";" index=false
+    """
+    source_alias: str
+    filepath: str
+    format: Optional[str] = None  # Auto-detect if None
+    params: Optional[dict] = None  # Optional parameters (sep, index, etc.)
+
+# =============================================================================
+# DEPRECATED: Old specialized load/save nodes (kept for backward compatibility)
+# These will be removed in a future version - use LoadNode/SaveNode instead
+# =============================================================================
+
 @dataclass
 class LoadCSVNode(ASTNode):
+    """DEPRECATED: Use LoadNode instead"""
     filepath: str
     params: dict  # All optional parameters
     alias: str
 
 @dataclass
 class LoadJSONNode(ASTNode):
+    """DEPRECATED: Use LoadNode instead"""
     filepath: str
     params: dict
     alias: str
 
 @dataclass
 class LoadExcelNode(ASTNode):
+    """DEPRECATED: Use LoadNode instead"""
     filepath: str
     params: dict
     alias: str
 
 @dataclass
 class LoadParquetNode(ASTNode):
+    """DEPRECATED: Use LoadNode instead"""
     filepath: str
     params: dict
     alias: str
 
 @dataclass
 class LoadSQLNode(ASTNode):
+    """DEPRECATED: Use LoadNode instead"""
     query: str
     connection: str
     params: dict
     alias: str
 
-# Enhanced Save Nodes
 @dataclass
 class SaveCSVNode(ASTNode):
+    """DEPRECATED: Use SaveNode instead"""
     source_alias: str
     filepath: str
     params: dict
 
 @dataclass
 class SaveJSONNode(ASTNode):
+    """DEPRECATED: Use SaveNode instead"""
     source_alias: str
     filepath: str
     params: dict
 
 @dataclass
 class SaveExcelNode(ASTNode):
+    """DEPRECATED: Use SaveNode instead"""
     source_alias: str
     filepath: str
     params: dict
 
 @dataclass
 class SaveParquetNode(ASTNode):
+    """DEPRECATED: Use SaveNode instead"""
     source_alias: str
     filepath: str
     params: dict
@@ -232,10 +281,24 @@ class DropNANode(ASTNode):
 
 @dataclass
 class FillNANode(ASTNode):
+    """
+    UNIFIED SYNTAX v2.0: Consolidated fillna operation
+
+    Supports all filling strategies with a single operation:
+    - fillna data column age with value=0 as filled
+    - fillna data column age with method="mean" as filled
+    - fillna data column age with method="median" as filled
+    - fillna data column age with method="forward" as filled (ffill)
+    - fillna data column age with method="backward" as filled (bfill)
+    - fillna data column age with method="mode" as filled
+
+    Replaces: FillMeanNode, FillMedianNode, FillForwardNode, FillBackwardNode, FillModeNode
+    """
     source_alias: str
-    fill_value: Any
-    columns: Optional[List[str]]
+    column: str
     new_alias: str
+    fill_value: Optional[Any] = None  # For literal fill values
+    method: Optional[str] = None  # For strategy-based filling: mean, median, forward, backward, mode
 
 @dataclass
 class MutateNode(ASTNode):
@@ -1184,3 +1247,164 @@ class CountTrueNode(ASTNode):
 class CompareNode(ASTNode):
     left_alias: str
     right_alias: str
+
+# ===== UNIFIED SYNTAX NODES (v2.0) =====
+
+# Expression Language Nodes
+@dataclass
+class ExpressionNode(ASTNode):
+    """Base class for DSL expressions (used in apply/map operations)"""
+    pass
+
+@dataclass
+class BinaryOpNode(ExpressionNode):
+    """Binary operation: left op right"""
+    left: ExpressionNode
+    operator: str  # +, -, *, /, %, **, ==, !=, <, >, <=, >=, and, or
+    right: ExpressionNode
+
+@dataclass
+class UnaryOpNode(ExpressionNode):
+    """Unary operation: op operand"""
+    operator: str  # not, -
+    operand: ExpressionNode
+
+@dataclass
+class LiteralNode(ExpressionNode):
+    """Literal value (number, string, boolean, null)"""
+    value: Any
+
+@dataclass
+class IdentifierNode(ExpressionNode):
+    """Variable reference (value, row, col)"""
+    name: str
+
+@dataclass
+class FunctionCallNode(ExpressionNode):
+    """DSL function call: func_name(arg1, arg2, ...)"""
+    function_name: str
+    arguments: List[ExpressionNode]
+
+@dataclass
+class ConditionalExprNode(ExpressionNode):
+    """Conditional expression: if(condition, true_expr, false_expr) or expr where condition else expr"""
+    condition: 'CompoundConditionNode'
+    true_expr: ExpressionNode
+    false_expr: ExpressionNode
+
+# Condition Nodes for Filtering
+@dataclass
+class CompoundConditionNode(ASTNode):
+    """Complex condition with and/or/not"""
+    pass
+
+@dataclass
+class BinaryConditionNode(CompoundConditionNode):
+    """Binary condition: left op right"""
+    left: CompoundConditionNode
+    operator: str  # 'and', 'or'
+    right: CompoundConditionNode
+
+@dataclass
+class NotConditionNode(CompoundConditionNode):
+    """Negation: not condition"""
+    condition: CompoundConditionNode
+
+@dataclass
+class ComparisonNode(CompoundConditionNode):
+    """Comparison: column op value"""
+    left: str  # column name or identifier
+    operator: str  # ==, !=, <, >, <=, >=
+    right: Any  # value or expression
+
+@dataclass
+class BetweenNode(CompoundConditionNode):
+    """Between condition: column between min and max"""
+    column: str
+    min_value: Any
+    max_value: Any
+
+@dataclass
+class InNode(CompoundConditionNode):
+    """In condition: column in [values]"""
+    column: str
+    values: List[Any]
+
+@dataclass
+class StringMatchNode(CompoundConditionNode):
+    """String matching: column contains/starts_with/ends_with/matches pattern"""
+    column: str
+    match_type: str  # 'contains', 'starts_with', 'ends_with', 'matches'
+    pattern: str
+
+@dataclass
+class NullCheckNode(CompoundConditionNode):
+    """Null check: column is [not] null"""
+    column: str
+    is_not_null: bool  # True for 'is not null', False for 'is null'
+
+# Consolidated Operation Nodes
+
+@dataclass
+class ExtractNode(ASTNode):
+    """Consolidated date extraction: extract column part="year|month|day|..." as alias"""
+    source_alias: str
+    column: str
+    part: str  # year, month, day, hour, minute, second, dayofweek, dayofyear, weekofyear, quarter
+    new_alias: str
+
+@dataclass
+class MapNode(ASTNode):
+    """Consolidated map operation: map source column col with transform expr as alias"""
+    source_alias: str
+    column: str
+    transform: Optional[ExpressionNode]  # For transform expressions
+    mapping: Optional[dict]  # For mapping dictionaries
+    new_alias: str
+
+@dataclass
+class UpdatedApplyNode(ASTNode):
+    """Updated apply operation with DSL expressions: apply source with transform expr as alias"""
+    source_alias: str
+    transform: ExpressionNode  # DSL expression
+    new_alias: str
+
+@dataclass
+class UpdatedGroupByNode(ASTNode):
+    """Updated groupby with 'compute' keyword: groupby source by {cols} compute {aggs} as alias"""
+    source_alias: str
+    group_columns: List[str]
+    aggregations: List['AggregationNode']  # Using 'compute' instead of 'agg'
+    new_alias: str
+
+@dataclass
+class UpdatedFilterNode(ASTNode):
+    """Updated filter with rich where clause: filter source where condition as alias"""
+    source_alias: str
+    condition: CompoundConditionNode  # Supports complex conditions
+    new_alias: str
+
+@dataclass
+class ConsolidatedLoadNode(ASTNode):
+    """Consolidated load: load "file.csv" as alias or load "file" with format="csv" as alias"""
+    filepath: str
+    format: Optional[str]  # Auto-detect from extension or explicit
+    params: dict  # All optional parameters
+    alias: str
+
+@dataclass
+class ConsolidatedSaveNode(ASTNode):
+    """Consolidated save: save source to "file.csv" or save source to "file" with format="csv" """
+    source_alias: str
+    filepath: str
+    format: Optional[str]  # Auto-detect from extension or explicit
+    params: dict  # All optional parameters
+
+@dataclass
+class UpdatedFillNANode(ASTNode):
+    """Updated fillna with method parameter: fillna source column col with method="mean|median|forward|backward" as alias"""
+    source_alias: str
+    column: Optional[str]  # Can be None to fill all columns
+    value: Optional[Any]  # Fill with specific value
+    method: Optional[str]  # Fill method: mean, median, forward, backward
+    new_alias: str

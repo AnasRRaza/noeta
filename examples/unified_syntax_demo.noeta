@@ -1,0 +1,86 @@
+# ============================================================================
+# Noeta DSL - Unified Syntax v2.0 Demo
+# ============================================================================
+# This demo showcases the new unified, coherent syntax for Noeta DSL
+# Demonstrates consolidation of operations and consistent parameter patterns
+# ============================================================================
+
+# ============================================================================
+# 1. UNIFIED LOAD OPERATION (replaces load_csv, load_json, load_excel, etc.)
+# ============================================================================
+
+# Auto-detect format from file extension
+load "data/sales_data.csv" as sales
+
+# ============================================================================
+# 2. UNIFIED FILTER OPERATION (replaces 9 filter operations)
+# ============================================================================
+
+# Simple comparison
+filter sales where price > 100 as expensive
+
+# BETWEEN (replaces filter_between)
+filter sales where price between 50 and 200 as mid_range
+
+# IN (replaces filter_isin)
+filter sales where category in ["Electronics", "Computers"] as tech
+
+# CONTAINS (replaces filter_contains)
+filter sales where product contains "laptop" as laptops
+
+# IS NULL (replaces filter_null)
+filter sales where discount is null as no_discount
+
+# IS NOT NULL (replaces filter_notnull)
+filter sales where discount is not null as with_discount
+
+# Complex conditions with AND/OR
+filter sales where (price > 100 and quantity < 10) or (discount is not null) as special_deals
+
+# ============================================================================
+# 3. UNIFIED EXTRACT OPERATION (replaces 11 date extraction operations)
+# ============================================================================
+
+# Create a sample dataset with dates for testing
+load "data/sales_data.csv" as dates_test
+
+# Extract year (replaces extract_year)
+extract dates_test column date with part="year" as with_year
+
+# Extract month (replaces extract_month)
+extract dates_test column date with part="month" as with_month
+
+# Extract day (replaces extract_day)
+extract dates_test column date with part="day" as with_day
+
+# ============================================================================
+# 4. UNIFIED FILLNA OPERATION (replaces 5 fill operations)
+# ============================================================================
+
+# Fill with literal value
+fillna sales column price with value=0 as filled_zeros
+
+# Fill with mean (replaces fill_mean)
+fillna sales column price with method="mean" as filled_mean
+
+# Fill with median (replaces fill_median)
+fillna sales column price with method="median" as filled_median
+
+# Fill forward (replaces fill_forward)
+fillna sales column price with method="forward" as filled_forward
+
+# Fill backward (replaces fill_backward)
+fillna sales column price with method="backward" as filled_backward
+
+# ============================================================================
+# 5. UNIFIED SAVE OPERATION (replaces save_csv, save_json, save_excel, etc.)
+# ============================================================================
+
+# Auto-detect format from file extension
+save expensive to "output/expensive_items.csv"
+
+# With custom parameters
+save tech to "output/tech_products.csv" with sep=";" index=false
+
+# Display final results
+describe expensive

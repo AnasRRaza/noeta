@@ -83,16 +83,17 @@ class TokenType(Enum):
 
     # Phase 4: Transformation operations - Date
     PARSE_DATETIME = auto()
-    EXTRACT_YEAR = auto()
-    EXTRACT_MONTH = auto()
-    EXTRACT_DAY = auto()
-    EXTRACT_HOUR = auto()
-    EXTRACT_MINUTE = auto()
-    EXTRACT_SECOND = auto()
-    EXTRACT_DAYOFWEEK = auto()
-    EXTRACT_DAYOFYEAR = auto()
-    EXTRACT_WEEKOFYEAR = auto()
-    EXTRACT_QUARTER = auto()
+    EXTRACT = auto()  # NEW: consolidated date extraction (replaces extract_year, extract_month, etc.)
+    EXTRACT_YEAR = auto()  # DEPRECATED: will be removed
+    EXTRACT_MONTH = auto()  # DEPRECATED: will be removed
+    EXTRACT_DAY = auto()  # DEPRECATED: will be removed
+    EXTRACT_HOUR = auto()  # DEPRECATED: will be removed
+    EXTRACT_MINUTE = auto()  # DEPRECATED: will be removed
+    EXTRACT_SECOND = auto()  # DEPRECATED: will be removed
+    EXTRACT_DAYOFWEEK = auto()  # DEPRECATED: will be removed
+    EXTRACT_DAYOFYEAR = auto()  # DEPRECATED: will be removed
+    EXTRACT_WEEKOFYEAR = auto()  # DEPRECATED: will be removed
+    EXTRACT_QUARTER = auto()  # DEPRECATED: will be removed
     DATE_DIFF = auto()
     DATE_ADD = auto()
     DATE_SUBTRACT = auto()
@@ -175,8 +176,9 @@ class TokenType(Enum):
     RESET_INDEX = auto()
     APPLY_ROW = auto()
     APPLY_COLUMN = auto()
-    APPLYMAP = auto()  # Element-wise function application
-    MAP_VALUES = auto()  # Map values using dictionary
+    APPLYMAP = auto()  # DEPRECATED: will be merged into APPLY
+    MAP = auto()  # NEW: consolidated map operation (replaces map_values)
+    MAP_VALUES = auto()  # DEPRECATED: will be removed
     RESAMPLE = auto()
     ASSIGN_CONST = auto()  # assign constant value operation
 
@@ -218,6 +220,7 @@ class TokenType(Enum):
     ON = auto()
     FROM = auto()
     AGG = auto()
+    COMPUTE = auto()  # NEW: replaces agg in groupby
     COLUMN = auto()
     COLUMNS = auto()
     VALUE = auto()
@@ -229,6 +232,7 @@ class TokenType(Enum):
     BINS = auto()
     WINDOW = auto()
     FUNCTION = auto()
+    TRANSFORM = auto()  # NEW: for DSL expressions
     VS = auto()
     TEST = auto()
     X = auto()
@@ -257,7 +261,16 @@ class TokenType(Enum):
     SUBSET = auto()
     AND = auto()
     OR = auto()
+    NOT = auto()  # NEW: logical not operator
     IN = auto()
+    BETWEEN = auto()  # NEW: for filter between
+    CONTAINS = auto()  # NEW: for filter contains
+    STARTS_WITH = auto()  # NEW: for filter starts_with
+    ENDS_WITH = auto()  # NEW: for filter ends_with
+    MATCHES = auto()  # NEW: for filter matches (regex)
+    IS = auto()  # NEW: for null checks (is null, is not null)
+    NULL = auto()  # NEW: for null literal
+    PART = auto()  # NEW: for extract part parameter
     DECIMALS = auto()
     EXPONENT = auto()
     BASE = auto()
@@ -349,6 +362,7 @@ class TokenType(Enum):
     # Literals
     STRING_LITERAL = auto()
     NUMERIC_LITERAL = auto()
+    BOOLEAN_LITERAL = auto()  # NEW: for true/false
     IDENTIFIER = auto()
     
     # Operators
@@ -364,7 +378,11 @@ class TokenType(Enum):
     STAR = auto()  # *
     SLASH = auto()  # /
     PERCENT = auto()  # %
-    
+    # EXPONENT already defined earlier for ** operator
+    DOT = auto()  # . (for future row/column access)
+    LPAREN = auto()  # ( (for function calls and expressions)
+    RPAREN = auto()  # ) (for function calls and expressions)
+
     # Punctuation
     LBRACE = auto()  # {
     RBRACE = auto()  # }
@@ -467,7 +485,8 @@ class Lexer:
             'extract_regex': TokenType.EXTRACT_REGEX,
             'find': TokenType.FIND,
             'parse_datetime': TokenType.PARSE_DATETIME,
-            'extract_year': TokenType.EXTRACT_YEAR,
+            'extract': TokenType.EXTRACT,  # NEW: consolidated extract operation
+            'extract_year': TokenType.EXTRACT_YEAR,  # DEPRECATED
             'extract_month': TokenType.EXTRACT_MONTH,
             'extract_day': TokenType.EXTRACT_DAY,
             'extract_hour': TokenType.EXTRACT_HOUR,
@@ -557,8 +576,9 @@ class Lexer:
             'reset_index': TokenType.RESET_INDEX,
             'apply_row': TokenType.APPLY_ROW,
             'apply_column': TokenType.APPLY_COLUMN,
-            'applymap': TokenType.APPLYMAP,
-            'map_values': TokenType.MAP_VALUES,
+            'map': TokenType.MAP,  # NEW: consolidated map operation
+            'applymap': TokenType.APPLYMAP,  # DEPRECATED: merged into apply
+            'map_values': TokenType.MAP_VALUES,  # DEPRECATED: use map instead
             'resample': TokenType.RESAMPLE,
             'assign': TokenType.ASSIGN_CONST,
 
@@ -590,9 +610,11 @@ class Lexer:
             'with': TokenType.WITH,
             'on': TokenType.ON,
             'from': TokenType.FROM,
-            'agg': TokenType.AGG,
+            'agg': TokenType.AGG,  # DEPRECATED: use compute instead
+            'compute': TokenType.COMPUTE,  # NEW: replaces agg
             'column': TokenType.COLUMN,
             'columns': TokenType.COLUMNS,
+            'transform': TokenType.TRANSFORM,  # NEW: for DSL expressions
             'value': TokenType.VALUE,
             'values': TokenType.VALUES,
             'n': TokenType.N,
@@ -630,7 +652,18 @@ class Lexer:
             'subset': TokenType.SUBSET,
             'and': TokenType.AND,
             'or': TokenType.OR,
+            'not': TokenType.NOT,  # NEW: logical not
             'in': TokenType.IN,
+            'between': TokenType.BETWEEN,  # NEW: for filter between
+            'contains': TokenType.CONTAINS,  # NEW: for filter contains
+            'starts_with': TokenType.STARTS_WITH,  # NEW: for filter starts_with
+            'ends_with': TokenType.ENDS_WITH,  # NEW: for filter ends_with
+            'matches': TokenType.MATCHES,  # NEW: for filter matches (regex)
+            'is': TokenType.IS,  # NEW: for is null/is not null
+            'null': TokenType.NULL,  # NEW: null literal
+            'true': TokenType.BOOLEAN_LITERAL,  # NEW: true boolean
+            'false': TokenType.BOOLEAN_LITERAL,  # NEW: false boolean
+            'part': TokenType.PART,  # NEW: for extract part parameter
             'decimals': TokenType.DECIMALS,
             'exponent': TokenType.EXPONENT,
             'base': TokenType.BASE,
@@ -813,7 +846,12 @@ class Lexer:
             if self.current_char().isalpha() or self.current_char() == '_':
                 line, col = self.line, self.column
                 value = self.read_identifier()
-                token_type = self.keywords.get(value, TokenType.IDENTIFIER)
+                # Check for boolean literals first
+                if value.lower() == 'true':
+                    return Token(TokenType.BOOLEAN_LITERAL, True, line, col)
+                if value.lower() == 'false':
+                    return Token(TokenType.BOOLEAN_LITERAL, False, line, col)
+                token_type = self.keywords.get(value.lower(), TokenType.IDENTIFIER)
                 return Token(token_type, value, line, col)
             
             # Operators
@@ -874,6 +912,26 @@ class Lexer:
             if self.current_char() == '%':
                 self.advance()
                 return Token(TokenType.PERCENT, '%', line, col)
+
+            # Power operator **
+            if self.current_char() == '*' and self.peek_char() == '*':
+                self.advance()
+                self.advance()
+                return Token(TokenType.EXPONENT, '**', line, col)
+
+            # Dot operator (for future row.column access)
+            if self.current_char() == '.':
+                self.advance()
+                return Token(TokenType.DOT, '.', line, col)
+
+            # Parentheses (for function calls and expressions)
+            if self.current_char() == '(':
+                self.advance()
+                return Token(TokenType.LPAREN, '(', line, col)
+
+            if self.current_char() == ')':
+                self.advance()
+                return Token(TokenType.RPAREN, ')', line, col)
 
             # Punctuation
             if self.current_char() == '{':

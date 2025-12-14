@@ -1,0 +1,15 @@
+# ============================================================================
+# Noeta DSL - Unified Syntax v2.0 Basic Test
+# ============================================================================
+# Simple test without external file dependencies
+# Tests core unified syntax features
+# ============================================================================
+
+# Test 1: Load operation with auto-detection
+load "data/sales_data.csv" as sales
+
+# Test 2: Simple filter with comparison
+filter sales where price > 100 as expensive_items
+
+# Test 3: Display results
+describe expensive_items

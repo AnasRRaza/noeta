@@ -56,18 +56,78 @@ class CodeGenerator:
     
     # Data manipulation visitors
     def visit_LoadNode(self, node: LoadNode):
-        # Determine file type and use appropriate pandas function
-        if node.file_path.endswith('.csv'):
-            code = f"{node.alias} = pd.read_csv('{node.file_path}')"
-        elif node.file_path.endswith('.json'):
-            code = f"{node.alias} = pd.read_json('{node.file_path}')"
-        elif node.file_path.endswith(('.xlsx', '.xls')):
-            code = f"{node.alias} = pd.read_excel('{node.file_path}')"
+        """
+        UNIFIED SYNTAX v2.0: Generate code for consolidated load operation
+
+        Handles all formats (csv, json, excel, parquet, sql) with optional parameters.
+        Format is auto-detected from file extension or explicitly specified.
+        """
+        format_type = node.format
+        filepath = node.filepath
+        params = node.params or {}
+
+        # Build parameters string
+        params_str = self._build_params_str(params) if params else ""
+
+        # Generate appropriate pandas read function based on format
+        if format_type == 'csv':
+            if params_str:
+                code = f"{node.alias} = pd.read_csv('{filepath}', {params_str})"
+            else:
+                code = f"{node.alias} = pd.read_csv('{filepath}')"
+
+        elif format_type == 'json':
+            if params_str:
+                code = f"{node.alias} = pd.read_json('{filepath}', {params_str})"
+            else:
+                code = f"{node.alias} = pd.read_json('{filepath}')"
+
+        elif format_type == 'excel':
+            if params_str:
+                code = f"{node.alias} = pd.read_excel('{filepath}', {params_str})"
+            else:
+                code = f"{node.alias} = pd.read_excel('{filepath}')"
+
+        elif format_type == 'parquet':
+            if params_str:
+                code = f"{node.alias} = pd.read_parquet('{filepath}', {params_str})"
+            else:
+                code = f"{node.alias} = pd.read_parquet('{filepath}')"
+
+        elif format_type == 'sql':
+            # Add SQLAlchemy import for SQL
+            self.imports.add("from sqlalchemy import create_engine")
+
+            # Get connection string from params
+            connection = params.get('connection', filepath)
+            self.code_lines.append(f"_engine = create_engine('{connection}')")
+
+            # Build SQL-specific parameters
+            sql_params = {k: v for k, v in params.items() if k not in ['connection', 'params']}
+            sql_params_str = self._build_params_str(sql_params) if sql_params else ""
+
+            # Handle query parameters
+            if 'params' in params:
+                query_params = params['params']
+                params_dict_str = self._format_value(query_params)
+                if sql_params_str:
+                    code = f"{node.alias} = pd.read_sql('''{filepath}''', con=_engine, params={params_dict_str}, {sql_params_str})"
+                else:
+                    code = f"{node.alias} = pd.read_sql('''{filepath}''', con=_engine, params={params_dict_str})"
+            else:
+                if sql_params_str:
+                    code = f"{node.alias} = pd.read_sql('''{filepath}''', con=_engine, {sql_params_str})"
+                else:
+                    code = f"{node.alias} = pd.read_sql('''{filepath}''', con=_engine)"
         else:
-            code = f"{node.alias} = pd.read_csv('{node.file_path}')"  # Default to CSV
+            # Fallback to CSV if format unknown
+            if params_str:
+                code = f"{node.alias} = pd.read_csv('{filepath}', {params_str})"
+            else:
+                code = f"{node.alias} = pd.read_csv('{filepath}')"
 
         self.code_lines.append(code)
-        self.code_lines.append(f"print(f'Loaded {node.file_path} as {node.alias}: {{len({node.alias})}} rows, {{len({node.alias}.columns)}} columns')")
+        self.code_lines.append(f"print(f'Loaded {filepath} as {node.alias}: {{len({node.alias})}} rows, {{len({node.alias}.columns)}} columns')")
 
     def visit_LoadCSVNode(self, node: LoadCSVNode):
         """Generate code for enhanced CSV loading with parameters"""
@@ -403,10 +463,10 @@ class CodeGenerator:
     
     def visit_FilterNode(self, node: FilterNode):
         condition = node.condition
-        
+
         # Build the filter expression
         left = f"{node.source_alias}['{condition.left_operand}']"
-        
+
         # Handle right operand
         if isinstance(condition.right_operand, str):
             # Check if it's a column reference or a string literal
@@ -420,11 +480,96 @@ class CodeGenerator:
                 right = f"'{condition.right_operand}'"
         else:
             right = str(condition.right_operand)
-        
+
         filter_expr = f"{left} {condition.operator} {right}"
         code = f"{node.new_alias} = {node.source_alias}[{filter_expr}].copy()"
         self.code_lines.append(code)
         self.code_lines.append(f"print(f'Filtered {node.source_alias}: {{len({node.new_alias})}} rows match condition')")
+
+    def visit_UpdatedFilterNode(self, node):
+        """
+        UNIFIED SYNTAX v2.0: Generate code for rich where clause filtering
+        Handles all filter modes: comparisons, between, in, contains, etc.
+        """
+        filter_expr = self._generate_condition_code(node.source_alias, node.condition)
+        code = f"{node.new_alias} = {node.source_alias}[{filter_expr}].copy()"
+        self.code_lines.append(code)
+        self.code_lines.append(f"print(f'Filtered {node.source_alias}: {{len({node.new_alias})}} rows match condition')")
+
+    def _generate_condition_code(self, source_alias: str, condition) -> str:
+        """Generate pandas filter expression from CompoundConditionNode"""
+        from noeta_ast import (BinaryConditionNode, NotConditionNode, ComparisonNode,
+                               BetweenNode, InNode, StringMatchNode, NullCheckNode)
+
+        if isinstance(condition, BinaryConditionNode):
+            # Binary condition: left and/or right
+            left_expr = self._generate_condition_code(source_alias, condition.left)
+            right_expr = self._generate_condition_code(source_alias, condition.right)
+            op = '&' if condition.operator == 'and' else '|'
+            return f"({left_expr}) {op} ({right_expr})"
+
+        elif isinstance(condition, NotConditionNode):
+            # Negation: ~condition
+            inner_expr = self._generate_condition_code(source_alias, condition.condition)
+            return f"~({inner_expr})"
+
+        elif isinstance(condition, ComparisonNode):
+            # Simple comparison: column op value
+            left = f"{source_alias}['{condition.left}']"
+            right = self._format_value_for_pandas(condition.right)
+            return f"{left} {condition.operator} {right}"
+
+        elif isinstance(condition, BetweenNode):
+            # Between: column.between(min, max)
+            column = f"{source_alias}['{condition.column}']"
+            min_val = self._format_value_for_pandas(condition.min_value)
+            max_val = self._format_value_for_pandas(condition.max_value)
+            return f"{column}.between({min_val}, {max_val})"
+
+        elif isinstance(condition, InNode):
+            # In: column.isin(values)
+            column = f"{source_alias}['{condition.column}']"
+            values = [self._format_value_for_pandas(v) for v in condition.values]
+            values_str = '[' + ', '.join(values) + ']'
+            return f"{column}.isin({values_str})"
+
+        elif isinstance(condition, StringMatchNode):
+            # String matching: column.str.contains/startswith/endswith/match
+            column = f"{source_alias}['{condition.column}']"
+            pattern = self._format_value_for_pandas(condition.pattern)
+
+            if condition.match_type == 'contains':
+                return f"{column}.str.contains({pattern}, na=False)"
+            elif condition.match_type == 'starts_with':
+                return f"{column}.str.startswith({pattern}, na=False)"
+            elif condition.match_type == 'ends_with':
+                return f"{column}.str.endswith({pattern}, na=False)"
+            elif condition.match_type == 'matches':
+                return f"{column}.str.match({pattern}, na=False)"
+
+        elif isinstance(condition, NullCheckNode):
+            # Null check: column.isnull() or column.notnull()
+            column = f"{source_alias}['{condition.column}']"
+            if condition.is_not_null:
+                return f"{column}.notnull()"
+            else:
+                return f"{column}.isnull()"
+
+        else:
+            raise ValueError(f"Unknown condition type: {type(condition)}")
+
+    def _format_value_for_pandas(self, value):
+        """Format a value for use in pandas expressions"""
+        if isinstance(value, str):
+            return f"'{value}'"
+        elif isinstance(value, bool):
+            return str(value)
+        elif isinstance(value, (int, float)):
+            return str(value)
+        elif value is None:
+            return 'None'
+        else:
+            return repr(value)
     
     def visit_SortNode(self, node: SortNode):
         columns = [spec.column_name for spec in node.sort_specs]
@@ -498,21 +643,51 @@ class CodeGenerator:
         self.code_lines.append(f"print(f'Dropped NA values: {{len({node.source_alias}) - len({node.new_alias})}} rows removed')")
     
     def visit_FillNANode(self, node: FillNANode):
-        if node.columns:
-            code = f"{node.new_alias} = {node.source_alias}.copy()\n"
-            for col in node.columns:
-                if isinstance(node.fill_value, str):
-                    code += f"{node.new_alias}['{col}'] = {node.new_alias}['{col}'].fillna('{node.fill_value}')\n"
-                else:
-                    code += f"{node.new_alias}['{col}'] = {node.new_alias}['{col}'].fillna({node.fill_value})\n"
-        else:
-            if isinstance(node.fill_value, str):
-                code = f"{node.new_alias} = {node.source_alias}.fillna('{node.fill_value}').copy()"
+        """
+        UNIFIED SYNTAX v2.0: Consolidated fillna operation
+
+        Handles both literal values and method-based filling:
+        - fillna data column age with value=0 as filled
+        - fillna data column age with method="mean" as filled
+        - fillna data column age with method="median" as filled
+        - fillna data column age with method="forward" as filled (ffill)
+        - fillna data column age with method="backward" as filled (bfill)
+        - fillna data column age with method="mode" as filled
+        """
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+
+        if node.method:
+            # Method-based filling
+            method_lower = node.method.lower()
+
+            if method_lower == 'mean':
+                fill_expr = f"{node.source_alias}['{node.column}'].mean()"
+                code += f"{node.new_alias}['{node.column}'] = {node.new_alias}['{node.column}'].fillna({fill_expr})\n"
+            elif method_lower == 'median':
+                fill_expr = f"{node.source_alias}['{node.column}'].median()"
+                code += f"{node.new_alias}['{node.column}'] = {node.new_alias}['{node.column}'].fillna({fill_expr})\n"
+            elif method_lower == 'mode':
+                code += f"_mode_value = {node.source_alias}['{node.column}'].mode()[0] if not {node.source_alias}['{node.column}'].mode().empty else None\n"
+                code += f"{node.new_alias}['{node.column}'] = {node.new_alias}['{node.column}'].fillna(_mode_value)\n"
+            elif method_lower in ['forward', 'ffill']:
+                code += f"{node.new_alias}['{node.column}'] = {node.new_alias}['{node.column}'].ffill()\n"
+            elif method_lower in ['backward', 'bfill']:
+                code += f"{node.new_alias}['{node.column}'] = {node.new_alias}['{node.column}'].bfill()\n"
             else:
-                code = f"{node.new_alias} = {node.source_alias}.fillna({node.fill_value}).copy()"
-        
+                raise ValueError(f"Unknown fill method: {node.method}")
+
+            code += f"print(f'Filled NA values in {node.column} using method: {method_lower}')"
+        elif node.fill_value is not None:
+            # Literal value filling
+            if isinstance(node.fill_value, str):
+                code += f"{node.new_alias}['{node.column}'] = {node.new_alias}['{node.column}'].fillna('{node.fill_value}')\n"
+            else:
+                code += f"{node.new_alias}['{node.column}'] = {node.new_alias}['{node.column}'].fillna({node.fill_value})\n"
+            code += f"print(f'Filled NA values in {node.column} with: {node.fill_value}')"
+        else:
+            raise ValueError("FillNA requires either fill_value or method")
+
         self.code_lines.append(code)
-        self.code_lines.append(f"print('Filled NA values in {node.source_alias}')")
     
     def visit_MutateNode(self, node: MutateNode):
         code = f"{node.new_alias} = {node.source_alias}.copy()\n"
@@ -711,14 +886,53 @@ class CodeGenerator:
     
     # File operation visitors
     def visit_SaveNode(self, node: SaveNode):
-        if node.format_type == 'parquet':
-            code = f"{node.source_alias}.to_parquet('{node.file_path}', index=False)\n"
-        elif node.format_type == 'json':
-            code = f"{node.source_alias}.to_json('{node.file_path}', orient='records', indent=2)\n"
-        else:  # Default to CSV
-            code = f"{node.source_alias}.to_csv('{node.file_path}', index=False)\n"
-        
-        code += f"print(f'Saved {node.source_alias} to {node.file_path}')"
+        """
+        UNIFIED SYNTAX v2.0: Generate code for consolidated save operation
+
+        Handles all formats (csv, json, excel, parquet) with optional parameters.
+        Format is auto-detected from file extension or explicitly specified.
+        """
+        format_type = node.format
+        filepath = node.filepath
+        params = node.params or {}
+
+        # Build parameters string, with defaults
+        if format_type == 'csv':
+            # Default CSV params
+            default_params = {'index': False}
+            default_params.update(params)
+            params_str = self._build_params_str(default_params)
+            code = f"{node.source_alias}.to_csv('{filepath}', {params_str})\n"
+
+        elif format_type == 'json':
+            # Default JSON params
+            default_params = {'orient': 'records', 'indent': 2}
+            default_params.update(params)
+            params_str = self._build_params_str(default_params)
+            code = f"{node.source_alias}.to_json('{filepath}', {params_str})\n"
+
+        elif format_type == 'excel':
+            # Default Excel params
+            default_params = {'index': False}
+            default_params.update(params)
+            params_str = self._build_params_str(default_params)
+            code = f"{node.source_alias}.to_excel('{filepath}', {params_str})\n"
+
+        elif format_type == 'parquet':
+            # Default Parquet params
+            default_params = {'index': False}
+            default_params.update(params)
+            params_str = self._build_params_str(default_params)
+            code = f"{node.source_alias}.to_parquet('{filepath}', {params_str})\n"
+
+        else:
+            # Fallback to CSV
+            default_params = {'index': False}
+            default_params.update(params)
+            params_str = self._build_params_str(default_params)
+            code = f"{node.source_alias}.to_csv('{filepath}', {params_str})\n"
+
+        code += f"print(f'Saved {node.source_alias} to {filepath}')"
         self.code_lines.append(code)
     
     def visit_ExportPlotNode(self, node: ExportPlotNode):
@@ -913,6 +1127,43 @@ class CodeGenerator:
         code = f"{node.new_alias} = {node.source_alias}.copy()\n"
         code += f"{node.new_alias}['{node.column}_day'] = {node.source_alias}['{node.column}'].dt.day\n"
         code += f"print(f'Extracted day from {node.column}')"
+        self.code_lines.append(code)
+        self.symbol_table[node.new_alias] = True
+
+    def visit_ExtractNode(self, node):
+        """
+        UNIFIED SYNTAX v2.0: Consolidated date extraction operation
+
+        Generates code for extracting any date/time component using pandas dt accessor.
+        Supported parts: year, month, day, hour, minute, second, dayofweek,
+                        dayofyear, weekofyear, quarter
+
+        Example: extract data column timestamp with part="year" as year
+        Generates: year = data.copy()
+                  year['timestamp_year'] = data['timestamp'].dt.year
+        """
+        # Map part names to pandas dt properties
+        part_map = {
+            'year': 'year',
+            'month': 'month',
+            'day': 'day',
+            'hour': 'hour',
+            'minute': 'minute',
+            'second': 'second',
+            'dayofweek': 'dayofweek',
+            'dayofyear': 'dayofyear',
+            'weekofyear': 'isocalendar().week',  # Changed in pandas 1.1+
+            'week': 'isocalendar().week',
+            'quarter': 'quarter'
+        }
+
+        part_lower = node.part.lower()
+        dt_property = part_map.get(part_lower, part_lower)
+
+        code = f"{node.new_alias} = {node.source_alias}.copy()\n"
+        code += f"{node.new_alias}['{node.column}_{part_lower}'] = {node.source_alias}['{node.column}'].dt.{dt_property}\n"
+        code += f"print(f'Extracted {part_lower} from {node.column}')"
+
         self.code_lines.append(code)
         self.symbol_table[node.new_alias] = True
 
