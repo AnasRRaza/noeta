@@ -1,5 +1,20 @@
 # Noeta Command Reference Guide
 
+**Purpose**: Quick reference for Noeta command syntax
+**Audience**: Users who need fast syntax lookup
+**Scope**: Syntax patterns and examples for all 167 operations
+**Length**: 901 lines
+**Last Updated**: December 15, 2025
+
+**Use this document when**: You need to quickly look up the syntax for a specific operation
+
+**Related Documents**:
+- [DATA_MANIPULATION_REFERENCE.md](DATA_MANIPULATION_REFERENCE.md) - Comprehensive operation details
+- [SYNTAX_BLUEPRINT.md](SYNTAX_BLUEPRINT.md) - Design principles and patterns
+- [STATUS.md](STATUS.md) - Implementation coverage
+
+---
+
 ## Table of Contents
 1. [Data Manipulation Commands](#data-manipulation-commands)
 2. [Analysis Commands](#analysis-commands)

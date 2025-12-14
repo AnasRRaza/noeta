@@ -1,5 +1,7 @@
 # Noeta DSL - Complete System Flow Diagram
 
+**Last Updated**: December 15, 2025
+
 ## 1. High-Level System Architecture
 
 ```mermaid

@@ -1,8 +1,19 @@
 # Comprehensive Data Manipulation Reference for DSL Development
 
-**Version**: 1.0
-**Last Updated**: 2025-11-30
-**Purpose**: Complete reference for all data manipulation operations a DSL should support
+**Version**: 2.0
+**Last Updated**: December 15, 2025
+
+**Purpose**: Comprehensive reference for all 167 implemented data manipulation operations
+**Audience**: Users performing data manipulation tasks
+**Scope**: Covers all operation categories with syntax, parameters, examples, and pandas equivalents
+**Length**: 3,220 lines (92KB)
+
+**Use this document when**: You need detailed syntax, parameters, or examples for any Noeta operation
+
+**Related Documents**:
+- [NOETA_COMMAND_REFERENCE.md](NOETA_COMMAND_REFERENCE.md) - Quick syntax lookup
+- [STATUS.md](STATUS.md) - Implementation status
+- [SYNTAX_BLUEPRINT.md](SYNTAX_BLUEPRINT.md) - Design principles
 
 ---
 

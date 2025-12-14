@@ -1,5 +1,7 @@
 # Noeta DSL - Setup and Demo Guide
 
+**Last Updated**: December 15, 2025
+
 ## Quick Setup (5 minutes)
 
 ### 1. Install Dependencies
@@ -9,7 +11,7 @@ pip install pandas numpy matplotlib seaborn scipy scikit-learn jupyter ipykernel
 
 ### 2. Install Noeta Jupyter Kernel
 ```bash
-cd /home/claude/noeta
+cd /Users/anasraza/University/FALL-2025/FYP-II/Project/noeta
 python install_kernel.py
 ```
 
@@ -18,7 +20,7 @@ python install_kernel.py
 ### Basic Demo
 ```bash
 # Navigate to the Noeta directory
-cd /home/claude/noeta
+cd /Users/anasraza/University/FALL-2025/FYP-II/Project/noeta
 
 # Run a simple inline example
 python noeta_runner.py -c 'load "data/sales_data.csv" as sales
@@ -32,7 +34,7 @@ python noeta_runner.py examples/demo_basic.noeta
 
 ### Setup for VS Code
 1. Open VS Code
-2. Open the folder `/home/claude/noeta`
+2. Open the folder `/Users/anasraza/University/FALL-2025/FYP-II/Project/noeta`
 3. Install Python extension if not already installed
 4. Create a new file with `.noeta` extension
 
@@ -49,7 +51,7 @@ describe expensive
 2. Create a Python script `run_noeta.py`:
 ```python
 import sys
-sys.path.insert(0, '/home/claude/noeta')
+sys.path.insert(0, '/Users/anasraza/University/FALL-2025/FYP-II/Project/noeta')
 from noeta_runner import execute_noeta
 
 # Read the .noeta file
@@ -199,7 +201,7 @@ pip install --upgrade pandas numpy matplotlib seaborn scipy scikit-learn
 ```
 
 ### If file paths don't work:
-- Use absolute paths: `/home/claude/noeta/data/sales_data.csv`
+- Use absolute paths: `/Users/anasraza/University/FALL-2025/FYP-II/Project/noeta/data/sales_data.csv`
 - Or ensure you're in the correct directory
 
 ## Advanced Features Demo (If Time Permits)

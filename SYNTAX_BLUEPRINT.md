@@ -1,15 +1,15 @@
 # Noeta DSL Syntax Blueprint
 
 **Version**: 2.0
-**Last Updated**: December 12, 2025
-**Status**: Reference Document for Unified Syntax System
+**Last Updated**: December 15, 2025
+**Status**: Active - Design Authority
 
----
+**Purpose**: Authoritative style guide for Noeta DSL syntax design
+**Audience**: Language designers, core contributors
+**Scope**: Design principles, syntax patterns, grammar specifications, guidelines
+**Length**: 1,579 lines
 
-## Purpose
-
-This document serves as the **authoritative style guide** for the Noeta DSL. It defines:
-
+**This document defines**:
 1. **Design principles** that guide all syntax decisions
 2. **Core syntax patterns** that cover all operation types
 3. **Grammar specifications** for the language
@@ -21,6 +21,11 @@ This document serves as the **authoritative style guide** for the Noeta DSL. It 
 - Reviewing syntax for consistency
 - Designing new language features
 - Teaching others about Noeta design
+
+**Related Documents**:
+- [DATA_MANIPULATION_REFERENCE.md](DATA_MANIPULATION_REFERENCE.md) - All 167 operations
+- [NOETA_COMMAND_REFERENCE.md](NOETA_COMMAND_REFERENCE.md) - Quick syntax reference
+- [CLAUDE.md](CLAUDE.md) - Developer guide
 
 ---
 

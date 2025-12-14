@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Run basic tests | `python test_noeta.py` | test_noeta.py |
 | View generated Python | Add `-v` flag or set `verbose=True` | noeta_runner.py |
 | Add new operation | See "Adding New Operations" section below | All 4 core files |
-| Check operation coverage | See `CURRENT_STATUS.md` | Documentation |
+| Check operation coverage | See `STATUS.md` | Documentation |
 | View syntax examples | See `examples/` directory | 20+ example files |
 
 ---
@@ -457,8 +457,7 @@ describe result
 ```
 
 ### 6. Update Documentation
-- Add operation to `IMPLEMENTATION_PROGRESS.md`
-- Update `CURRENT_STATUS.md` coverage metrics
+- Update `STATUS.md` coverage metrics and implementation details
 - Add syntax to `NOETA_COMMAND_REFERENCE.md`
 
 ---
@@ -685,7 +684,7 @@ Each stage produces complete output before next stage begins (no streaming/incre
 - ⚠️ Memory optimization for huge datasets (need Phase 14)
 
 ### Remaining Gaps (83 low-priority operations)
-See `REMAINING_GAPS.md` for detailed analysis:
+See `STATUS.md` for detailed analysis of remaining gaps:
 - Trigonometric functions (6 ops)
 - Advanced string operations (8 ops)
 - Additional date/time operations (10 ops)
@@ -703,27 +702,20 @@ See `REMAINING_GAPS.md` for detailed analysis:
 ## Documentation Structure
 
 ### Implementation Documentation
-1. **IMPLEMENTATION_PROGRESS.md** (317 lines)
-   - Tracks all 12 completed phases
-   - Syntax examples for each operation
-   - Implementation status by phase
-
-2. **IMPLEMENTATION_SUMMARY.md** (488 lines)
-   - High-level summary of all operations
-   - Natural language syntax patterns
-   - Code statistics and metrics
-
-3. **CURRENT_STATUS.md** (334 lines)
-   - Current implementation status
-   - Coverage analysis by category
+1. **STATUS.md** (~850 lines) - Single Source of Truth
+   - Consolidated implementation status
+   - Coverage analysis by category (167/250 operations, 67%)
+   - Phase-wise completion overview (Phases 1-12)
+   - Remaining gaps analysis (83 operations)
    - Production readiness assessment
-   - Test results and usage examples
+   - Implementation roadmap (Phases 13-15)
+   - Test results and code statistics
 
-4. **REMAINING_GAPS.md** (307 lines)
-   - Analysis of 83 unimplemented operations
-   - Priority classification
-   - Implementation roadmap
-   - Effort estimates
+2. **DOCUMENTATION_MAP.md** (~400 lines) - Master Index
+   - Complete documentation structure
+   - Quick navigation for different user types
+   - Document purposes and relationships
+   - Update schedule and maintenance guidelines
 
 ### Phase-Specific Documentation
 5. **PHASE11_COMPLETION_SUMMARY.md** (364 lines)
@@ -958,7 +950,7 @@ Each function documented with ~2,000-2,500 words covering:
 ## Next Steps for Contributors
 
 ### If You Want to Add Operations
-1. Choose from remaining 83 operations in `REMAINING_GAPS.md`
+1. Choose from remaining 83 operations in `STATUS.md`
 2. Follow "Adding New Operations" guide above
 3. Start with Phase 13 (trigonometric, advanced strings, date/time)
 4. Test thoroughly with example files
@@ -983,9 +975,9 @@ Each function documented with ~2,000-2,500 words covering:
 
 ### Documentation Files
 - **Architecture**: `FLOW_DIAGRAM.md`, `CLAUDE.md`
-- **Status**: `CURRENT_STATUS.md`, `REMAINING_GAPS.md`
-- **Reference**: `DATA_MANIPULATION_REFERENCE.md`, `NOETA_COMMAND_REFERENCE.md`
-- **Progress**: `IMPLEMENTATION_PROGRESS.md`, `IMPLEMENTATION_SUMMARY.md`
+- **Status**: `STATUS.md` (single source of truth), `DOCUMENTATION_MAP.md` (master index)
+- **Reference**: `DATA_MANIPULATION_REFERENCE.md`, `NOETA_COMMAND_REFERENCE.md`, `SYNTAX_BLUEPRINT.md`
+- **Archive**: `docs/archive/` (historical phase completion summaries)
 - **Phases**: `PHASE11_COMPLETION_SUMMARY.md`, `PHASE12_COMPLETION_SUMMARY.md`
 - **Analysis**: `DATA_ANALYSIS_REFERENCE.md` (statistical functions)
 
@@ -1018,7 +1010,7 @@ pip install -e .
 
 ---
 
-**Last Updated**: December 12, 2025
+**Last Updated**: December 15, 2025
 **Project Status**: ✅ PRODUCTION READY
 **Coverage**: 167/250 operations (67%)
 **Codebase**: 7,377 lines of implementation + 10,327 lines of documentation
