@@ -8,6 +8,7 @@ from pathlib import Path
 from noeta_lexer import Lexer
 from noeta_parser import Parser
 from noeta_codegen import CodeGenerator
+from noeta_semantic import SemanticAnalyzer
 from noeta_errors import NoetaError
 
 def compile_noeta(source_code: str) -> str:
@@ -20,6 +21,14 @@ def compile_noeta(source_code: str) -> str:
         # Parsing (pass source code for error context)
         parser = Parser(tokens, source_code)
         ast = parser.parse()
+
+        # Semantic validation (NEW: catch errors at compile-time)
+        analyzer = SemanticAnalyzer(source_code)
+        errors = analyzer.analyze(ast)
+
+        if errors:
+            # Raise the first error (could show all errors in future)
+            raise errors[0]
 
         # Code generation
         generator = CodeGenerator()

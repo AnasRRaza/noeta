@@ -17,6 +17,7 @@ setup(
         'noeta_runner',
         'noeta_kernel',
         'noeta_errors',
+        'noeta_semantic',
         'install_kernel',
         'test_noeta'
     ],

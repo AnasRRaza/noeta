@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Noeta** is a production-ready Domain-Specific Language (DSL) for data analysis that compiles to Python/Pandas code. It provides an intuitive, natural language-like syntax for data manipulation, statistical analysis, and visualization tasks.
 
 **Project Maturity**: Production Ready (67% of planned features implemented, 167/250 operations)
-**Codebase Size**: ~7,400 lines of core implementation code + ~10,300 lines of documentation
-**Last Major Update**: December 6, 2025
+**Codebase Size**: ~9,100 lines of core implementation code + ~10,300 lines of documentation
+**Last Major Update**: December 17, 2025 - **Semantic Validation System Added** ✅
 
 **For comprehensive visual documentation of the entire system architecture and execution flow, see `FLOW_DIAGRAM.md` which contains 10 detailed Mermaid diagrams covering:**
 - System architecture and component interactions
@@ -36,34 +36,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Architecture
 
-Noeta follows a classic compiler pipeline architecture with four main compilation stages:
+Noeta follows a classic compiler pipeline architecture with **five main compilation stages**:
 
 1. **Lexer** (`noeta_lexer.py`, 916 lines): Tokenizes Noeta source code into tokens
 2. **Parser** (`noeta_parser.py`, 3,480 lines): Builds an Abstract Syntax Tree (AST) from tokens
 3. **AST** (`noeta_ast.py`, 1,186 lines): Defines all AST node types using dataclasses
-4. **Code Generator** (`noeta_codegen.py`, 1,795 lines): Converts AST to executable Python/Pandas code
-5. **Runner** (`noeta_runner.py`, ~60 lines): Main execution script that orchestrates the compilation pipeline
-6. **Kernel** (`noeta_kernel.py`, ~180 lines): Jupyter kernel implementation for notebook integration
+4. **Semantic Analyzer** (`noeta_semantic.py`, 1,717 lines): ⭐ **NEW!** Validates AST for semantic correctness
+5. **Code Generator** (`noeta_codegen.py`, 1,795 lines): Converts AST to executable Python/Pandas code
+6. **Runner** (`noeta_runner.py`, ~100 lines): Main execution script that orchestrates the compilation pipeline
+7. **Kernel** (`noeta_kernel.py`, ~180 lines): Jupyter kernel implementation for notebook integration
+8. **Error Handler** (`noeta_errors.py`, ~200 lines): Rich error formatting with position tracking
 
-**Total Core Implementation**: 7,377 lines of code
+**Total Core Implementation**: 9,094 lines of code
 
 ### Compilation Pipeline
 
 ```
-Noeta source → Lexer → Tokens → Parser → AST → CodeGenerator → Python code → exec()
+Noeta source → Lexer → Tokens → Parser → AST → SemanticAnalyzer → CodeGenerator → Python code → exec()
+                                                      ↓
+                                              Catch errors at
+                                              compile-time! ✅
 ```
 
 The code generator maintains a symbol table to track variable aliases and generates imports dynamically based on operations used.
 
 ### Code Statistics by Component
 
-| Component | Lines | Token Types | AST Nodes | Parser Methods | Visitor Methods |
-|-----------|-------|-------------|-----------|----------------|-----------------|
-| Lexer | 916 | 150+ | N/A | N/A | N/A |
-| AST | 1,186 | N/A | 167 | N/A | N/A |
-| Parser | 3,480 | N/A | N/A | 167+ | N/A |
-| CodeGen | 1,795 | N/A | N/A | N/A | 167 |
-| **TOTAL** | **7,377** | **150+** | **167** | **167+** | **167** |
+| Component | Lines | Token Types | AST Nodes | Parser Methods | Validator Methods | CodeGen Visitors |
+|-----------|-------|-------------|-----------|----------------|-------------------|------------------|
+| Lexer | 916 | 150+ | N/A | N/A | N/A | N/A |
+| AST | 1,186 | N/A | 167 | N/A | N/A | N/A |
+| Parser | 3,480 | N/A | N/A | 167+ | N/A | N/A |
+| **Semantic** ⭐ | **1,717** | N/A | N/A | N/A | **138** | N/A |
+| CodeGen | 1,795 | N/A | N/A | N/A | N/A | 167 |
+| Runner | ~100 | N/A | N/A | N/A | N/A | N/A |
+| Errors | ~200 | N/A | N/A | N/A | N/A | N/A |
+| **TOTAL** | **~9,094** | **150+** | **167** | **167+** | **138** | **167** |
 
 ---
 
@@ -379,12 +387,18 @@ self.keywords = {
 @dataclass
 class MyOperationNode(ASTNode):
     """Represents a my_operation statement."""
-    source: str
+    source_alias: str  # ⚠️ Use source_alias, not source!
     column: str  # if column-based
+    new_alias: str  # ⚠️ Use new_alias, not alias!
     param1: Optional[str] = None
     param2: Optional[int] = None
-    alias: Optional[str] = None
 ```
+
+**⚠️ IMPORTANT - Naming Convention:**
+- Use `source_alias` for the input dataset (NOT `source`)
+- Use `new_alias` for the output dataset (NOT `alias`)
+- For operations with two inputs: `alias1`, `alias2` (e.g., JoinNode)
+- For merge operations: `left_alias`, `right_alias` (e.g., MergeNode)
 
 ### 3. Add Parser Method (`noeta_parser.py`)
 ```python
@@ -426,9 +440,9 @@ def parse_statement(self):
 ```python
 def visit_MyOperationNode(self, node):
     """Generate code for my_operation."""
-    df_var = self.symbol_table.get(node.source)
+    df_var = self.symbol_table.get(node.source_alias)  # Use source_alias
     if not df_var:
-        raise ValueError(f"Unknown dataframe: {node.source}")
+        raise ValueError(f"Unknown dataframe: {node.source_alias}")
 
     # Generate pandas code
     code = f"{df_var}['{node.column}'].my_pandas_method("
@@ -439,16 +453,47 @@ def visit_MyOperationNode(self, node):
     code += ")"
 
     # Handle alias
-    if node.alias:
+    if node.new_alias:  # Use new_alias
         new_var = f"df_{len(self.symbol_table)}"
         self.code.append(f"{new_var} = {code}")
-        self.symbol_table[node.alias] = new_var
-        self.code.append(f"print(f'Applied my_operation to {{node.source}}')")
+        self.symbol_table[node.new_alias] = new_var
+        self.code.append(f"print(f'Applied my_operation to {node.source_alias}')")
     else:
         self.code.append(f"print({code})")
 ```
 
-### 5. Add Tests
+### 5. Add Semantic Validator (`noeta_semantic.py`) ⭐ **REQUIRED!**
+```python
+def visit_MyOperationNode(self, node):
+    """Validate my_operation operation."""
+    # 1. Check source dataset exists
+    source_info = self._check_dataset_exists(node.source_alias, node)
+
+    # 2. Validate column exists (if applicable)
+    if hasattr(node, 'column') and node.column:
+        self._check_column_exists(source_info, node.column, node)
+
+    # 3. Check column type (if applicable)
+    # if hasattr(node, 'column') and node.column:
+    #     self._check_column_type(source_info, node.column, DataType.NUMERIC, node)
+
+    # 4. Register result dataset (if creates new dataset)
+    if node.new_alias:
+        result_info = DatasetInfo(
+            name=node.new_alias,
+            columns=source_info.columns.copy(),
+            source=f"my_operation from {node.source_alias}"
+        )
+        self.symbol_table.define(node.new_alias, result_info)
+```
+
+**Why semantic validation is critical:**
+- ✅ Catches undefined dataset references at **compile-time** (not runtime)
+- ✅ Provides helpful error messages with suggestions
+- ✅ Maintains symbol table for tracking all datasets
+- ✅ Enables better IDE support and error detection in the future
+
+### 6. Add Tests
 Create test file in `examples/test_my_operation.noeta`:
 ```noeta
 load csv "data/sales_data.csv" as sales
@@ -456,9 +501,23 @@ my_operation sales column price param1="value" as result
 describe result
 ```
 
-### 6. Update Documentation
+### 7. Update Documentation
 - Update `STATUS.md` coverage metrics and implementation details
 - Add syntax to `NOETA_COMMAND_REFERENCE.md`
+
+---
+
+## Quick Checklist for New Operations
+
+When adding a new operation, ensure ALL 5 core files are updated:
+
+1. ✅ `noeta_lexer.py` - Token + keyword
+2. ✅ `noeta_ast.py` - AST node (use `source_alias`, `new_alias`!)
+3. ✅ `noeta_parser.py` - Parse method + dispatcher
+4. ✅ `noeta_codegen.py` - Code generator visitor
+5. ✅ `noeta_semantic.py` - **Semantic validator (REQUIRED!)** ⭐
+
+**Common mistake:** Forgetting to add the semantic validator! This will cause undefined dataset errors to only be caught at runtime instead of compile-time.
 
 ### ⚠️ IMPORTANT: Adding New Modules
 
@@ -1039,8 +1098,9 @@ pip install -e .
 
 ---
 
-**Last Updated**: December 15, 2025
-**Project Status**: ✅ PRODUCTION READY
+**Last Updated**: December 17, 2025
+**Project Status**: ✅ PRODUCTION READY with Semantic Validation
 **Coverage**: 167/250 operations (67%)
-**Codebase**: 7,377 lines of implementation + 10,327 lines of documentation
+**Codebase**: 9,094 lines of implementation + 10,327 lines of documentation
+**New Feature**: ✅ Compile-time semantic validation (138 validators)
 **Maintainer**: Claude Code
