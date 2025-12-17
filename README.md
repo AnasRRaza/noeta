@@ -279,12 +279,29 @@ save scaled to "preprocessed.csv"
 
 ## Testing
 
-Run basic tests:
+### Unit Tests (208 tests)
+Run comprehensive test suite:
+```bash
+# Run all tests
+pytest tests/
+
+# Run with coverage
+pytest tests/ --cov=. --cov-report=term-missing
+
+# Run specific test file
+pytest tests/test_semantic.py -v
+```
+
+**See [TESTING.md](TESTING.md) for complete testing guide with all commands.**
+
+### Basic Tests
+Run basic functionality tests:
 ```bash
 python test_noeta.py
 ```
 
-Run example files:
+### Example Files
+Run example .noeta files:
 ```bash
 # Phase 1-10 tests
 python noeta_runner.py examples/test_phase1_io.noeta
