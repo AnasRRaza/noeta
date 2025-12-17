@@ -1,0 +1,26 @@
+# ============================================
+# Test: Reserved keywords as column names
+# ============================================
+# Tests that reserved keywords like 'target', 'index', 'values' can be used as column names
+# ============================================
+
+# Load sample data
+load "data/sales_data.csv" as sales
+
+# Test 1: Select columns including potential reserved keywords
+select sales {product_id, category, price, quantity} as selected
+
+# Test 2: Display the selected data
+head selected with n=5
+
+# Test 3: Use unique on the selected data
+unique selected column category
+
+# Test 4: Use value_counts on the selected data
+value_counts selected column category
+
+# Test 5: Filter the selected data
+filter selected where price > 50 as filtered
+
+# Test 6: Describe the filtered data
+describe filtered

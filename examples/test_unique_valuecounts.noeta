@@ -1,0 +1,26 @@
+# ============================================
+# Test: unique and value_counts operations
+# ============================================
+# Tests the newly implemented statistical operations
+# ============================================
+
+# Load sample data
+load "data/sales_data.csv" as sales
+
+# Test 1: unique operation on category
+unique sales column category
+
+# Test 2: unique on product_id
+unique sales column product_id
+
+# Test 3: value_counts operation (basic)
+value_counts sales column category
+
+# Test 4: value_counts with normalize flag
+value_counts sales column category normalize
+
+# Test 5: value_counts with ascending order
+value_counts sales column category ascending
+
+# Test 6: value_counts on customer_id
+value_counts sales column customer_id

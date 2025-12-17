@@ -137,13 +137,13 @@ class SelectByTypeNode(ASTNode):
 class HeadNode(ASTNode):
     source_alias: str
     n_rows: int
-    new_alias: str
+    new_alias: Optional[str] = None
 
 @dataclass
 class TailNode(ASTNode):
     source_alias: str
     n_rows: int
-    new_alias: str
+    new_alias: Optional[str] = None
 
 @dataclass
 class ILocNode(ASTNode):
@@ -271,7 +271,7 @@ class SampleNode(ASTNode):
     source_alias: str
     sample_size: int
     is_random: bool
-    new_alias: str
+    new_alias: Optional[str] = None
 
 @dataclass
 class DropNANode(ASTNode):
@@ -326,6 +326,20 @@ class SummaryNode(ASTNode):
 @dataclass
 class InfoNode(ASTNode):
     source_alias: str
+
+@dataclass
+class UniqueNode(ASTNode):
+    """Get unique values from a column."""
+    source_alias: str
+    column: str
+
+@dataclass
+class ValueCountsNode(ASTNode):
+    """Count occurrences of values."""
+    source_alias: str
+    column: str
+    normalize: bool = False
+    ascending: bool = False
 
 @dataclass
 class OutliersNode(ASTNode):

@@ -35,6 +35,8 @@ class TokenType(Enum):
     SAVE = auto()
     EXPORT_PLOT = auto()
     INFO = auto()
+    UNIQUE = auto()
+    VALUE_COUNTS = auto()
 
     # Phase 2: Selection & Projection operations
     SELECT_BY_TYPE = auto()
@@ -441,6 +443,8 @@ class Lexer:
             'save': TokenType.SAVE,
             'export_plot': TokenType.EXPORT_PLOT,
             'info': TokenType.INFO,
+            'unique': TokenType.UNIQUE,
+            'value_counts': TokenType.VALUE_COUNTS,
 
             # Phase 2: Selection & Projection
             'select_by_type': TokenType.SELECT_BY_TYPE,

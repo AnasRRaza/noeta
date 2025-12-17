@@ -387,6 +387,10 @@ class Parser:
             return self.parse_summary()
         elif token.type == TokenType.INFO:
             return self.parse_info()
+        elif token.type == TokenType.UNIQUE:
+            return self.parse_unique()
+        elif token.type == TokenType.VALUE_COUNTS:
+            return self.parse_value_counts()
         elif token.type == TokenType.OUTLIERS:
             return self.parse_outliers()
         elif token.type == TokenType.QUANTILE:
@@ -622,7 +626,7 @@ class Parser:
         return SelectByTypeNode(source, dtype, new_alias)
 
     def parse_head(self) -> HeadNode:
-        """Parse: head data with n=10 as alias"""
+        """Parse: head data [with n=10] [as alias]"""
         self.advance()  # consume HEAD
         source = self.expect(TokenType.IDENTIFIER).value
 
@@ -634,12 +638,16 @@ class Parser:
             self.expect(TokenType.ASSIGN)
             n_rows = self.expect(TokenType.NUMERIC_LITERAL).value
 
-        self.expect(TokenType.AS)
-        new_alias = self.expect(TokenType.IDENTIFIER).value
+        # Make 'as' optional
+        new_alias = None
+        if self.match(TokenType.AS):
+            self.advance()
+            new_alias = self.expect(TokenType.IDENTIFIER).value
+
         return HeadNode(source, int(n_rows), new_alias)
 
     def parse_tail(self) -> TailNode:
-        """Parse: tail data with n=10 as alias"""
+        """Parse: tail data [with n=10] [as alias]"""
         self.advance()  # consume TAIL
         source = self.expect(TokenType.IDENTIFIER).value
 
@@ -651,8 +659,12 @@ class Parser:
             self.expect(TokenType.ASSIGN)
             n_rows = self.expect(TokenType.NUMERIC_LITERAL).value
 
-        self.expect(TokenType.AS)
-        new_alias = self.expect(TokenType.IDENTIFIER).value
+        # Make 'as' optional
+        new_alias = None
+        if self.match(TokenType.AS):
+            self.advance()
+            new_alias = self.expect(TokenType.IDENTIFIER).value
+
         return TailNode(source, int(n_rows), new_alias)
 
     def parse_iloc(self) -> ILocNode:
@@ -1097,7 +1109,7 @@ class Parser:
         return GroupByNode(source, group_columns, aggregations, new_alias)
     
     def parse_sample(self) -> SampleNode:
-        """Parse: sample <source> with n=<num> [random] as <alias>"""
+        """Parse: sample <source> with n=<num> [random] [as <alias>]"""
         self.expect(TokenType.SAMPLE)
         source = self.expect(TokenType.IDENTIFIER).value
         self.expect(TokenType.WITH)
@@ -1111,8 +1123,12 @@ class Parser:
             is_random = True
             self.advance()
 
-        self.expect(TokenType.AS)
-        new_alias = self.expect(TokenType.IDENTIFIER).value
+        # Make 'as' optional
+        new_alias = None
+        if self.match(TokenType.AS):
+            self.advance()
+            new_alias = self.expect(TokenType.IDENTIFIER).value
+
         return SampleNode(source, size, is_random, new_alias)
     
     def parse_dropna(self) -> DropNANode:
@@ -1206,7 +1222,38 @@ class Parser:
         self.expect(TokenType.INFO)
         source = self.expect(TokenType.IDENTIFIER).value
         return InfoNode(source)
-    
+
+    def parse_unique(self) -> 'UniqueNode':
+        """Parse: unique <source> column <column>"""
+        from noeta_ast import UniqueNode
+        self.expect(TokenType.UNIQUE)
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+        return UniqueNode(source, column)
+
+    def parse_value_counts(self) -> 'ValueCountsNode':
+        """Parse: value_counts <source> column <column> [normalize] [ascending]"""
+        from noeta_ast import ValueCountsNode
+        self.expect(TokenType.VALUE_COUNTS)
+        source = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLUMN)
+        column = self.expect(TokenType.IDENTIFIER).value
+
+        # Optional flags
+        normalize = False
+        ascending = False
+
+        if self.match(TokenType.NORMALIZE):
+            normalize = True
+            self.advance()
+
+        if self.match(TokenType.ASCENDING):
+            ascending = True
+            self.advance()
+
+        return ValueCountsNode(source, column, normalize, ascending)
+
     def parse_outliers(self) -> OutliersNode:
         """Parse: outliers <source> with method=<method> columns {cols}"""
         self.expect(TokenType.OUTLIERS)
@@ -1427,24 +1474,41 @@ class Parser:
         return ExportPlotNode(file_name, width, height)
     
     # Helper parsing methods
+    def parse_identifier_or_keyword(self) -> str:
+        """Parse identifier or allow reserved keywords as column names."""
+        token = self.current_token()
+        if token.type == TokenType.IDENTIFIER:
+            self.advance()
+            return token.value
+        # Allow common reserved keywords as column names
+        elif token.type in [TokenType.TARGET, TokenType.INDEX, TokenType.COLUMN,
+                            TokenType.VALUES, TokenType.N, TokenType.MIN,
+                            TokenType.MAX, TokenType.METHOD, TokenType.SUBSET]:
+            self.advance()
+            # Get keyword text from token
+            return token.value if hasattr(token, 'value') else token.type.name.lower()
+        else:
+            raise SyntaxError(f"Expected identifier or column name, got {token.type}")
+
     def parse_column_list(self) -> List[str]:
+        """Parse: {col1, col2, col3} - allows reserved keywords as column names"""
         self.expect(TokenType.LBRACE)
         columns = []
-        columns.append(self.expect(TokenType.IDENTIFIER).value)
+        columns.append(self.parse_identifier_or_keyword())
         while self.match(TokenType.COMMA):
             self.advance()
-            columns.append(self.expect(TokenType.IDENTIFIER).value)
+            columns.append(self.parse_identifier_or_keyword())
         self.expect(TokenType.RBRACE)
         return columns
 
     def parse_column_list_natural(self) -> List[str]:
-        """Parse comma-separated columns without braces"""
+        """Parse comma-separated columns without braces - allows reserved keywords as column names"""
         columns = []
-        columns.append(self.expect(TokenType.IDENTIFIER).value)
+        columns.append(self.parse_identifier_or_keyword())
 
         while self.match(TokenType.COMMA):
             self.advance()
-            columns.append(self.expect(TokenType.IDENTIFIER).value)
+            columns.append(self.parse_identifier_or_keyword())
 
         return columns
 

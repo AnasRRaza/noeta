@@ -275,17 +275,29 @@ class CodeGenerator:
 
     def visit_HeadNode(self, node: HeadNode):
         """Generate code for getting first N rows"""
-        code = f"{node.new_alias} = {node.source_alias}.head({node.n_rows})"
-        self.code_lines.append(code)
-        self.code_lines.append(f"print(f'Selected first {node.n_rows} rows from {node.source_alias}')")
-        self.symbol_table[node.new_alias] = True
+        if node.new_alias:
+            # Create alias
+            code = f"{node.new_alias} = {node.source_alias}.head({node.n_rows})"
+            self.code_lines.append(code)
+            self.code_lines.append(f"print(f'Created alias {node.new_alias} with first {node.n_rows} rows')")
+            self.symbol_table[node.new_alias] = True
+        else:
+            # Just display
+            self.code_lines.append(f"print(f'\\nFirst {node.n_rows} rows of {node.source_alias}:')")
+            self.code_lines.append(f"print({node.source_alias}.head({node.n_rows}))")
 
     def visit_TailNode(self, node: TailNode):
         """Generate code for getting last N rows"""
-        code = f"{node.new_alias} = {node.source_alias}.tail({node.n_rows})"
-        self.code_lines.append(code)
-        self.code_lines.append(f"print(f'Selected last {node.n_rows} rows from {node.source_alias}')")
-        self.symbol_table[node.new_alias] = True
+        if node.new_alias:
+            # Create alias
+            code = f"{node.new_alias} = {node.source_alias}.tail({node.n_rows})"
+            self.code_lines.append(code)
+            self.code_lines.append(f"print(f'Created alias {node.new_alias} with last {node.n_rows} rows')")
+            self.symbol_table[node.new_alias] = True
+        else:
+            # Just display
+            self.code_lines.append(f"print(f'\\nLast {node.n_rows} rows of {node.source_alias}:')")
+            self.code_lines.append(f"print({node.source_alias}.tail({node.n_rows}))")
 
     def visit_ILocNode(self, node: ILocNode):
         """Generate code for position-based indexing"""
@@ -627,12 +639,23 @@ class CodeGenerator:
 
     
     def visit_SampleNode(self, node: SampleNode):
-        if node.is_random:
-            code = f"{node.new_alias} = {node.source_alias}.sample(n={node.sample_size}, random_state=42).copy()"
+        if node.new_alias:
+            # Create alias
+            if node.is_random:
+                code = f"{node.new_alias} = {node.source_alias}.sample(n={node.sample_size}, random_state=42).copy()"
+            else:
+                code = f"{node.new_alias} = {node.source_alias}.head({node.sample_size}).copy()"
+            self.code_lines.append(code)
+            self.code_lines.append(f"print(f'Created alias {node.new_alias} with {node.sample_size} sampled rows')")
+            self.symbol_table[node.new_alias] = True
         else:
-            code = f"{node.new_alias} = {node.source_alias}.head({node.sample_size}).copy()"
-        self.code_lines.append(code)
-        self.code_lines.append(f"print(f'Sampled {node.sample_size} rows from {node.source_alias}')")
+            # Just display
+            if node.is_random:
+                sample_expr = f"{node.source_alias}.sample(n={node.sample_size}, random_state=42)"
+            else:
+                sample_expr = f"{node.source_alias}.head({node.sample_size})"
+            self.code_lines.append(f"print(f'\\nSample of {node.sample_size} rows from {node.source_alias}:')")
+            self.code_lines.append(f"print({sample_expr})")
     
     def visit_DropNANode(self, node: DropNANode):
         if node.columns:
@@ -735,9 +758,25 @@ class CodeGenerator:
     def visit_InfoNode(self, node: InfoNode):
         code = f"print('\\nDataset Info for {node.source_alias}:')\n"
         code += f"{node.source_alias}.info()"
-        
+
         self.code_lines.append(code)
-    
+
+    def visit_UniqueNode(self, node):
+        """Generate: print(df['column'].unique())"""
+        code = f"unique_vals = {node.source_alias}['{node.column}'].unique()\n"
+        code += f"print(f'\\nUnique values in column {node.column}:')\n"
+        code += f"print(unique_vals)\n"
+        code += f"print(f'Count: {{len(unique_vals)}}')"
+        self.code_lines.append(code)
+
+    def visit_ValueCountsNode(self, node):
+        """Generate: print(df['column'].value_counts())"""
+        code = f"counts = {node.source_alias}['{node.column}'].value_counts("
+        code += f"normalize={node.normalize}, ascending={node.ascending})\n"
+        code += f"print(f'\\nValue counts for column {node.column}:')\n"
+        code += "print(counts)"
+        self.code_lines.append(code)
+
     def visit_OutliersNode(self, node: OutliersNode):
         code = f"# Detect outliers using {node.method} method\n"
         

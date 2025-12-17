@@ -1,0 +1,33 @@
+# ============================================
+# Test: Optional 'as' clause
+# ============================================
+# Tests that head, tail, and sample work without 'as' for quick display
+# ============================================
+
+# Load sample data
+load "data/sales_data.csv" as sales
+
+# Test 1: head without 'as' - just display
+head sales with n=10
+
+# Test 2: tail without 'as' - just display
+tail sales with n=5
+
+# Test 3: sample without 'as' - just display
+sample sales with n=20
+
+# Test 4: head with 'as' - create alias
+head sales with n=15 as top15
+describe top15
+
+# Test 5: tail with 'as' - create alias
+tail sales with n=10 as bottom10
+describe bottom10
+
+# Test 6: sample with 'as' - create alias
+sample sales with n=15 random as sample15
+describe sample15
+
+# Test 7: Use created aliases in further operations
+filter top15 where price > 100 as expensive
+describe expensive
