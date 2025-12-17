@@ -460,6 +460,35 @@ describe result
 - Update `STATUS.md` coverage metrics and implementation details
 - Add syntax to `NOETA_COMMAND_REFERENCE.md`
 
+### ⚠️ IMPORTANT: Adding New Modules
+
+**When creating a new Python module (e.g., `noeta_errors.py`, `noeta_semantic.py`), you MUST update `setup.py`:**
+
+Add the module name to the `py_modules` list:
+```python
+py_modules=[
+    'noeta_lexer',
+    'noeta_parser',
+    'noeta_ast',
+    'noeta_codegen',
+    'noeta_runner',
+    'noeta_kernel',
+    'noeta_errors',      # <-- Add new modules here
+    'install_kernel',
+    'test_noeta'
+],
+```
+
+Then reinstall the package:
+```bash
+pip install -e . --force-reinstall --no-deps
+```
+
+**Why this matters:**
+- Without updating `setup.py`, the new module won't be included in the package
+- This causes `ModuleNotFoundError` when using the `noeta` command
+- Always update setup.py BEFORE testing with the installed package
+
 ---
 
 ## Dependencies

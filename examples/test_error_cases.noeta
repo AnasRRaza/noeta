@@ -1,0 +1,10 @@
+# Test cases for error messages
+
+# Test 1: Syntax error - missing AS keyword
+load "data/sales_data.csv" sales
+
+# Test 2: Unexpected token
+select sales 123 as result
+
+# Test 3: Missing column specification
+select sales as result

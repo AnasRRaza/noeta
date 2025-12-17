@@ -4,11 +4,17 @@ Noeta Parser - Builds AST from tokens
 from typing import List, Optional
 from noeta_lexer import Token, TokenType
 from noeta_ast import *
+from noeta_errors import (
+    NoetaError, ErrorCategory, ErrorContext,
+    get_token_type_description, suggest_similar
+)
 
 class Parser:
-    def __init__(self, tokens: List[Token]):
+    def __init__(self, tokens: List[Token], source_code: str = ""):
         self.tokens = tokens
         self.pos = 0
+        self.source_code = source_code
+        self.source_lines = source_code.split('\n') if source_code else []
     
     def current_token(self) -> Optional[Token]:
         if self.pos >= len(self.tokens):
@@ -24,16 +30,100 @@ class Parser:
     def advance(self):
         self.pos += 1
     
-    def expect(self, token_type: TokenType) -> Token:
+    def expect(self, token_type: TokenType, context: str = "") -> Token:
+        """
+        Expect specific token with rich error on mismatch.
+
+        Args:
+            token_type: Expected token type
+            context: Optional context description (e.g., "select statement")
+
+        Returns:
+            The expected token
+
+        Raises:
+            NoetaError: If token doesn't match expected type
+        """
         token = self.current_token()
-        if not token or token.type != token_type:
-            raise SyntaxError(f"Expected {token_type}, got {token.type if token else 'EOF'}")
+
+        if not token or token.type == TokenType.EOF:
+            # Hit EOF unexpectedly
+            context_msg = f" in {context}" if context else ""
+            message = f"Unexpected end of file{context_msg}. Expected {self._friendly_token_name(token_type)}"
+
+            # For EOF, use the last token's position if available
+            error_context = None
+            if self.pos > 0 and self.pos - 1 < len(self.tokens):
+                last_token = self.tokens[self.pos - 1]
+                error_context = ErrorContext(
+                    line=last_token.line,
+                    column=last_token.column + (len(last_token.value) if hasattr(last_token, 'value') else 1),
+                    length=1,
+                    source_line=self._get_source_line(last_token.line)
+                )
+
+            raise NoetaError(
+                message=message,
+                category=ErrorCategory.SYNTAX,
+                context=error_context,
+                hint=f"The file ended before the {context or 'statement'} was complete"
+            )
+
+        if token.type != token_type:
+            # Wrong token type
+            context_msg = f" in {context}" if context else ""
+            message = f"Expected {self._friendly_token_name(token_type)}, got {self._friendly_token_name(token.type)}{context_msg}"
+
+            raise NoetaError(
+                message=message,
+                category=ErrorCategory.SYNTAX,
+                context=self._create_error_context(token),
+                hint=f"Check the syntax for {context or 'this operation'}"
+            )
+
         self.advance()
         return token
     
     def match(self, *token_types: TokenType) -> bool:
         token = self.current_token()
         return token and token.type in token_types
+
+    def _get_source_line(self, line_num: int) -> str:
+        """Get specific line from source code."""
+        if not self.source_lines or line_num < 1 or line_num > len(self.source_lines):
+            return ""
+        return self.source_lines[line_num - 1]
+
+    def _create_error_context(self, token: Optional[Token] = None) -> Optional[ErrorContext]:
+        """
+        Create error context from current position.
+
+        Args:
+            token: Optional token to use for position (uses current token if None)
+
+        Returns:
+            ErrorContext or None if no position info available
+        """
+        if token is None:
+            token = self.current_token()
+
+        if not token:
+            return None
+
+        source_line = self._get_source_line(token.line)
+        # Calculate length based on token value if available
+        length = len(token.value) if hasattr(token, 'value') and token.value else 1
+
+        return ErrorContext(
+            line=token.line,
+            column=token.column,
+            length=length,
+            source_line=source_line
+        )
+
+    def _friendly_token_name(self, token_type: TokenType) -> str:
+        """Convert TokenType to human-friendly description."""
+        return get_token_type_description(token_type.name)
     
     def parse(self) -> ProgramNode:
         statements = []

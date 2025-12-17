@@ -5,6 +5,7 @@ import re
 from enum import Enum, auto
 from dataclasses import dataclass
 from typing import List, Optional
+from noeta_errors import NoetaError, ErrorCategory, ErrorContext
 
 class TokenType(Enum):
     # Keywords - Operations
@@ -767,7 +768,14 @@ class Lexer:
         if pos >= len(self.source):
             return None
         return self.source[pos]
-    
+
+    def _get_current_line(self) -> str:
+        """Get the current line from source code for error reporting."""
+        lines = self.source.split('\n')
+        if self.line > 0 and self.line <= len(lines):
+            return lines[self.line - 1]
+        return ""
+
     def advance(self):
         if self.pos < len(self.source) and self.source[self.pos] == '\n':
             self.line += 1
@@ -963,7 +971,19 @@ class Lexer:
                 return Token(TokenType.COMMA, ',', line, col)
             
             # Unknown character
-            raise SyntaxError(f"Unexpected character '{self.current_char()}' at line {self.line}, column {self.column}")
+            char = self.current_char()
+            context = ErrorContext(
+                line=self.line,
+                column=self.column,
+                length=1,
+                source_line=self._get_current_line()
+            )
+            raise NoetaError(
+                message=f"Unexpected character '{char}'",
+                category=ErrorCategory.LEXER,
+                context=context,
+                hint="This character is not valid in Noeta syntax"
+            )
         
         return Token(TokenType.EOF, None, self.line, self.column)
     

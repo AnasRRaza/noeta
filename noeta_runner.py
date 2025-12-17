@@ -8,6 +8,7 @@ from pathlib import Path
 from noeta_lexer import Lexer
 from noeta_parser import Parser
 from noeta_codegen import CodeGenerator
+from noeta_errors import NoetaError
 
 def compile_noeta(source_code: str) -> str:
     """Compile Noeta source code to Python code."""
@@ -15,25 +16,28 @@ def compile_noeta(source_code: str) -> str:
         # Lexical analysis
         lexer = Lexer(source_code)
         tokens = lexer.tokenize()
-        
-        # Parsing
-        parser = Parser(tokens)
+
+        # Parsing (pass source code for error context)
+        parser = Parser(tokens, source_code)
         ast = parser.parse()
-        
+
         # Code generation
         generator = CodeGenerator()
         python_code = generator.generate(ast)
-        
+
         return python_code
+    except NoetaError:
+        # Re-raise NoetaError as-is (already formatted)
+        raise
     except Exception as e:
-        raise RuntimeError(f"Compilation error: {str(e)}")
+        raise RuntimeError(f"Unexpected compilation error: {str(e)}\nPlease report this as a bug")
 
 def execute_noeta(source_code: str, verbose: bool = False):
     """Compile and execute Noeta source code."""
     try:
         # Compile to Python
         python_code = compile_noeta(source_code)
-        
+
         if verbose:
             print("=" * 60)
             print("Generated Python Code:")
@@ -42,14 +46,18 @@ def execute_noeta(source_code: str, verbose: bool = False):
             print("=" * 60)
             print("Execution Output:")
             print("=" * 60)
-        
+
         # Execute the generated Python code
         exec(python_code, globals())
-        
+
+    except NoetaError as e:
+        # NoetaError is already beautifully formatted
+        print(str(e), file=sys.stderr)
+        return 1
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
-    
+
     return 0
 
 def main():

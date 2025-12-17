@@ -16,6 +16,7 @@ setup(
         'noeta_codegen',
         'noeta_runner',
         'noeta_kernel',
+        'noeta_errors',
         'install_kernel',
         'test_noeta'
     ],

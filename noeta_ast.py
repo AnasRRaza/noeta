@@ -1,13 +1,35 @@
 """
 AST Node definitions for Noeta DSL
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Any
 
 # Base AST Node
 @dataclass
 class ASTNode:
-    pass
+    """Base class for all AST nodes with position tracking."""
+
+    def __post_init__(self):
+        """Initialize position tracking fields if not already set."""
+        if not hasattr(self, 'line'):
+            self.line = 0
+        if not hasattr(self, 'column'):
+            self.column = 0
+
+    def set_position(self, line: int, column: int):
+        """
+        Set the position of this AST node.
+
+        Args:
+            line: Line number in source code
+            column: Column number in source code
+
+        Returns:
+            self (for method chaining)
+        """
+        self.line = line
+        self.column = column
+        return self
 
 # Program (root) node
 @dataclass
