@@ -123,11 +123,12 @@ class SemanticAnalyzer:
     - Invalid operation combinations
     """
 
-    def __init__(self, source_code: str = ""):
+    def __init__(self, source_code: str = "", enable_type_check: bool = False):
         self.source_code = source_code
         self.source_lines = source_code.split('\n') if source_code else []
         self.symbol_table = SymbolTable()
         self.errors: List[NoetaError] = []
+        self.enable_type_check = enable_type_check  # Enable file introspection
 
     def analyze(self, ast: ProgramNode) -> List[NoetaError]:
         """
@@ -291,23 +292,120 @@ class SemanticAnalyzer:
                 suggestion=None
             )
 
+    def _introspect_file_schema(self, filepath: str, format_type: Optional[str]) -> Dict[str, ColumnInfo]:
+        """
+        Introspect file to get column schema (when --type-check enabled).
+
+        Returns dict mapping column names to ColumnInfo.
+        Returns empty dict if introspection fails or is disabled.
+
+        Args:
+            filepath: Path to file to introspect
+            format_type: File format ('csv', 'excel', 'json', 'parquet', or None for auto-detect)
+
+        Returns:
+            Dictionary mapping column names to ColumnInfo objects
+        """
+        if not self.enable_type_check:
+            return {}  # Introspection disabled
+
+        try:
+            import os
+            import pandas as pd
+
+            # Resolve relative paths
+            if not os.path.isabs(filepath):
+                filepath = os.path.abspath(filepath)
+
+            if not os.path.exists(filepath):
+                return {}  # File doesn't exist at compile-time
+
+            # Read file header based on format
+            if format_type in ['csv', None]:  # None = auto-detect
+                df = pd.read_csv(filepath, nrows=0)  # Header only
+            elif format_type == 'excel':
+                df = pd.read_excel(filepath, nrows=0)
+            elif format_type == 'json':
+                df = pd.read_json(filepath, nrows=0)
+            elif format_type == 'parquet':
+                # Parquet has built-in schema
+                try:
+                    import pyarrow.parquet as pq
+                    schema = pq.read_schema(filepath)
+                    # Convert pyarrow schema to ColumnInfo dict
+                    columns = {}
+                    for i in range(len(schema)):
+                        field = schema.field(i)
+                        dtype_str = str(field.type)
+                        columns[field.name] = ColumnInfo(
+                            name=field.name,
+                            dtype=self._infer_data_type(dtype_str),
+                            nullable=field.nullable
+                        )
+                    return columns
+                except ImportError:
+                    # pyarrow not available, fall back to pandas
+                    df = pd.read_parquet(filepath, nrows=0)
+            else:
+                return {}
+
+            # Convert pandas dtypes to DataType enum
+            columns = {}
+            for col in df.columns:
+                dtype_str = str(df[col].dtype)
+                columns[col] = ColumnInfo(
+                    name=col,
+                    dtype=self._infer_data_type(dtype_str),
+                    nullable=True
+                )
+
+            return columns
+
+        except Exception:
+            # Silently fail - introspection is best-effort
+            return {}
+
+    def _infer_data_type(self, pandas_dtype: str) -> DataType:
+        """
+        Convert pandas dtype string to DataType enum.
+
+        Args:
+            pandas_dtype: String representation of pandas dtype
+
+        Returns:
+            Corresponding DataType enum value
+        """
+        pandas_dtype = pandas_dtype.lower()
+
+        if 'int' in pandas_dtype or 'float' in pandas_dtype or 'number' in pandas_dtype:
+            return DataType.NUMERIC
+        elif 'datetime' in pandas_dtype or 'timestamp' in pandas_dtype:
+            return DataType.DATETIME
+        elif 'bool' in pandas_dtype:
+            return DataType.BOOLEAN
+        elif 'object' in pandas_dtype or 'string' in pandas_dtype or 'str' in pandas_dtype:
+            return DataType.STRING
+        else:
+            return DataType.UNKNOWN
+
     # =========================================================================
     # VISITOR METHODS - Will be implemented in Days 2-4
     # =========================================================================
 
     def visit_LoadNode(self, node: LoadNode):
         """
-        Validate load operation and register dataset.
+        Validate load operation and register dataset with schema.
 
-        For load operations, we register the dataset but don't know the schema
-        until runtime (unless we want to actually load the file during validation,
-        which would be slow).
+        If type-check is enabled, introspects the file to get column schemas.
+        Otherwise, registers with empty schema (permissive mode).
         """
-        # Register the dataset in symbol table
-        # We don't know columns until runtime, so register with empty schema
+        # Introspect file schema (if type-check enabled)
+        columns = self._introspect_file_schema(node.filepath, node.format)
+
+        # Register dataset with schema
         dataset_info = DatasetInfo(
             name=node.alias,
-            columns={},  # Unknown until runtime
+            columns=columns,  # Populated if type-check enabled
             source=node.filepath
         )
         self.symbol_table.define(node.alias, dataset_info)
@@ -326,16 +424,26 @@ class SemanticAnalyzer:
     # 4. Register result dataset (if creates new dataset)
 
     def visit_SelectNode(self, node: SelectNode):
-        """Validate select operation (Day 2-3)."""
+        """Validate select operation with column validation."""
         # Check source exists
         source_info = self._check_dataset_exists(node.source_alias, node)
 
-        # TODO: Validate columns exist (if we know them)
+        # Validate columns exist (if schema is known)
+        if source_info and source_info.columns:
+            for col in node.columns:
+                self._check_column_exists(source_info, col, node)
+
+        # Track which columns survive in result
+        result_columns = {}
+        if source_info and source_info.columns:
+            for col in node.columns:
+                if col in source_info.columns:
+                    result_columns[col] = source_info.columns[col]
 
         # Register result dataset
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns={},  # Would need to track selected columns
+            columns=result_columns,  # Now tracks selected columns!
             source=f"select from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
@@ -365,10 +473,16 @@ class SemanticAnalyzer:
         self.symbol_table.define(node.new_alias, result_info)
 
     def visit_GroupByNode(self, node: GroupByNode):
-        """Validate groupby operation (Day 3)."""
+        """Validate groupby operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
 
+        # Validate grouping columns exist (if schema is known)
+        if source_info and source_info.columns:
+            for col in node.group_columns:
+                self._check_column_exists(source_info, col, node)
+
         # Register result dataset
+        # Schema tracking complex for groupby - simplified for MVP
         result_info = DatasetInfo(
             name=node.new_alias,
             columns={},  # Columns depend on aggregation
@@ -377,10 +491,16 @@ class SemanticAnalyzer:
         self.symbol_table.define(node.new_alias, result_info)
 
     def visit_JoinNode(self, node: JoinNode):
-        """Validate join operation (Day 3)."""
+        """Validate join operation with column validation."""
         # Check both datasets exist
         left_info = self._check_dataset_exists(node.alias1, node)
         right_info = self._check_dataset_exists(node.alias2, node)
+
+        # Validate join column exists in both datasets (if schemas are known)
+        if left_info and left_info.columns:
+            self._check_column_exists(left_info, node.join_column, node)
+        if right_info and right_info.columns:
+            self._check_column_exists(right_info, node.join_column, node)
 
         # Register result dataset
         result_info = DatasetInfo(
@@ -391,10 +511,24 @@ class SemanticAnalyzer:
         self.symbol_table.define(node.new_alias, result_info)
 
     def visit_MergeNode(self, node: MergeNode):
-        """Validate merge operation (Day 3)."""
+        """Validate merge operation with column validation."""
         # Check both datasets exist
         left_info = self._check_dataset_exists(node.left_alias, node)
         right_info = self._check_dataset_exists(node.right_alias, node)
+
+        # Validate merge keys exist (if schemas are known)
+        if node.on:
+            # Common column name for both datasets
+            if left_info and left_info.columns:
+                self._check_column_exists(left_info, node.on, node)
+            if right_info and right_info.columns:
+                self._check_column_exists(right_info, node.on, node)
+        elif node.left_on and node.right_on:
+            # Different column names
+            if left_info and left_info.columns:
+                self._check_column_exists(left_info, node.left_on, node)
+            if right_info and right_info.columns:
+                self._check_column_exists(right_info, node.right_on, node)
 
         # Register result dataset
         result_info = DatasetInfo(
@@ -523,35 +657,47 @@ class SemanticAnalyzer:
     # =========================================================================
 
     def visit_FilterBetweenNode(self, node: FilterBetweenNode):
-        """Validate filter_between operation."""
+        """Validate filter_between operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
 
         # Register result dataset
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"filter_between from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
 
     def visit_FilterIsInNode(self, node: FilterIsInNode):
-        """Validate filter_isin operation."""
+        """Validate filter_isin operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
 
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"filter_isin from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
 
     def visit_FilterContainsNode(self, node: FilterContainsNode):
-        """Validate filter_contains operation."""
+        """Validate filter_contains operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
 
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"filter_contains from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
@@ -590,12 +736,16 @@ class SemanticAnalyzer:
         self.symbol_table.define(node.new_alias, result_info)
 
     def visit_FilterNullNode(self, node: FilterNullNode):
-        """Validate filter_null operation."""
+        """Validate filter_null operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
 
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"filter_null from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
@@ -658,23 +808,32 @@ class SemanticAnalyzer:
     # =========================================================================
 
     def visit_DropNANode(self, node: DropNANode):
-        """Validate dropna operation."""
+        """Validate dropna operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate columns exist if specified (if schema is known)
+        if node.columns and source_info and source_info.columns:
+            for col in node.columns:
+                self._check_column_exists(source_info, col, node)
 
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"dropna from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
 
     def visit_FillNANode(self, node: FillNANode):
-        """Validate fillna operation."""
+        """Validate fillna operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
 
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"fillna from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
@@ -714,11 +873,16 @@ class SemanticAnalyzer:
 
     # Math Operations (7 operations)
     def visit_RoundNode(self, node):
-        """Validate round operation."""
+        """Validate round operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
+
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"round from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
@@ -785,21 +949,31 @@ class SemanticAnalyzer:
 
     # String Operations (14 operations)
     def visit_UpperNode(self, node):
-        """Validate upper operation."""
+        """Validate upper operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
+
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"upper from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
 
     def visit_LowerNode(self, node):
-        """Validate lower operation."""
+        """Validate lower operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
+
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"lower from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)
@@ -1077,11 +1251,16 @@ class SemanticAnalyzer:
 
     # Type Operations (2 operations)
     def visit_AsTypeNode(self, node):
-        """Validate astype operation."""
+        """Validate astype operation with column validation."""
         source_info = self._check_dataset_exists(node.source_alias, node)
+
+        # Validate column exists (if schema is known)
+        if source_info and source_info.columns:
+            self._check_column_exists(source_info, node.column, node)
+
         result_info = DatasetInfo(
             name=node.new_alias,
-            columns=source_info.columns.copy(),
+            columns=source_info.columns.copy() if source_info else {},
             source=f"astype from {node.source_alias}"
         )
         self.symbol_table.define(node.new_alias, result_info)

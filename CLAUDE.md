@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Noeta** is a production-ready Domain-Specific Language (DSL) for data analysis that compiles to Python/Pandas code. It provides an intuitive, natural language-like syntax for data manipulation, statistical analysis, and visualization tasks.
 
 **Project Maturity**: Production Ready (67% of planned features implemented, 167/250 operations)
-**Codebase Size**: ~9,100 lines of core implementation code + ~10,300 lines of documentation
-**Last Major Update**: December 19, 2025 - **Multi-Error Reporting Added** ✅ (Dec 17: Semantic Validation)
+**Codebase Size**: ~9,250 lines of core implementation code + ~10,400 lines of documentation
+**Last Major Update**: December 19, 2025 - **Column-Level Validation Added** ✅ (Multi-Error Reporting, Semantic Validation)
 
 **For comprehensive visual documentation of the entire system architecture and execution flow, see `FLOW_DIAGRAM.md` which contains 10 detailed Mermaid diagrams covering:**
 - System architecture and component interactions
@@ -331,6 +331,61 @@ if errors:
 - `MultiErrorFormatter` class in `noeta_errors.py` handles formatting
 - `create_multi_error()` function combines multiple errors into single exception
 - See `examples/test_multi_error_reporting.noeta` for demonstration
+
+#### Column-Level Validation (NEW: December 19, 2025) ✅
+
+The compiler now validates column references at compile-time using optional file introspection:
+
+```bash
+# Enable column validation with --type-check flag
+python noeta_runner.py script.noeta --type-check
+```
+
+**How It Works**:
+1. When `--type-check` is enabled, `SemanticAnalyzer` reads file headers during load operations
+2. Column schemas are stored in `DatasetInfo.columns` dictionary
+3. Visitor methods validate column existence for high-impact operations
+4. Validation is **permissive** - only validates when schema is known
+
+**Implementation** (in `noeta_semantic.py`):
+
+```python
+def _introspect_file_schema(self, filepath: str, format_type: str) -> Dict[str, ColumnInfo]:
+    """Reads file header to get column schema (when --type-check enabled)."""
+    if not self.enable_type_check:
+        return {}  # Fast path - no introspection
+
+    # Read file header (CSV: nrows=0, Parquet: read_schema)
+    df = pd.read_csv(filepath, nrows=0)  # Header only - very fast!
+
+    # Convert pandas dtypes to DataType enum
+    columns = {col: ColumnInfo(name=col, dtype=self._infer_data_type(str(df[col].dtype)))
+               for col in df.columns}
+    return columns
+
+def visit_SelectNode(self, node: SelectNode):
+    """Validate select with column checking."""
+    source_info = self._check_dataset_exists(node.source_alias, node)
+
+    # NEW: Validate columns exist (if schema is known)
+    if source_info and source_info.columns:
+        for col in node.columns:
+            self._check_column_exists(source_info, col, node)
+```
+
+**Validated Operations** (14 high-impact):
+- **Selection & Filtering**: SelectNode, FilterBetweenNode, FilterIsInNode, FilterContainsNode, FilterNullNode
+- **Transformation**: UpperNode, LowerNode, RoundNode, AsTypeNode
+- **Aggregation**: GroupByNode (validates group_columns)
+- **Joining**: JoinNode, MergeNode (validates join keys in both datasets)
+- **Cleaning**: DropNANode, FillNANode
+
+**Files Modified**:
+- `noeta_semantic.py`: +100 lines (introspection methods, 14 visitor updates)
+- `noeta_runner.py`: +50 lines (argparse, --type-check flag)
+
+**Example**:
+See `examples/test_column_validation.noeta` for demonstration
 
 #### Error Infrastructure
 
@@ -1009,6 +1064,16 @@ Each function documented with ~2,000-2,500 words covering:
 - ✅ Expanded debugging and troubleshooting sections
 - ✅ Added quick reference tables
 - ✅ Updated documentation structure overview
+
+### December 19, 2025: Column-Level Validation Implementation
+- ✅ Implemented file introspection system with `--type-check` flag
+- ✅ Added column validation for 14 high-impact operations
+- ✅ Support for CSV, Excel, JSON, Parquet file formats
+- ✅ Permissive mode: Only validates when schema is known
+- ✅ Modified files: `noeta_semantic.py` (+100 lines), `noeta_runner.py` (+50 lines)
+- ✅ Updated documentation: README.md, STATUS.md, CLAUDE.md
+- ✅ Comprehensive testing: Valid/invalid columns, multi-error reporting
+- ✅ Impact: Catches column errors at compile-time instead of runtime
 
 ---
 

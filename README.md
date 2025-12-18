@@ -223,6 +223,47 @@ Total: 2 errors found
 
 See `examples/test_multi_error_reporting.noeta` for a demonstration of the multi-error reporting system.
 
+### Column-Level Validation
+
+Enable compile-time column validation with the `--type-check` flag:
+
+```bash
+python noeta_runner.py script.noeta --type-check
+```
+
+Noeta will read file headers to validate column references **before execution**:
+
+```noeta
+load "sales.csv" as sales
+select sales {price, quantit} as result  # Typo: 'quantit' instead of 'quantity'
+```
+
+**Error with `--type-check`:**
+```
+Semantic Error:
+    Column 'quantit' does not exist in dataset 'sales'
+
+Hint: Available columns in 'sales': product_id, category, customer_id, price, quantity, discount, date
+```
+
+**Supported Operations (14 high-impact operations):**
+- **Selection**: select, filter_between, filter_isin, filter_contains, filter_null
+- **Transformation**: upper, lower, round, astype
+- **Aggregation**: groupby
+- **Joining**: join, merge
+- **Cleaning**: dropna, fillna
+
+**Features:**
+- ✅ **Optional Type Checking**: Fast by default, thorough with `--type-check`
+- ✅ **Multiple File Formats**: CSV, Excel, JSON, Parquet
+- ✅ **Compile-Time Detection**: Catch column errors before runtime
+- ✅ **Helpful Error Messages**: Shows available columns
+- ✅ **Permissive Mode**: Only validates when schema is known
+
+**Example:**
+
+See `examples/test_column_validation.noeta` for a demonstration of column validation.
+
 ---
 
 ## Example Workflows

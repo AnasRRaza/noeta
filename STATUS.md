@@ -42,6 +42,28 @@
 
 **Impact**: Faster debugging - fix all errors in one go instead of one-at-a-time
 
+### Column-Level Validation ✅
+**Implemented**: December 19, 2025
+
+- **Compile-Time Column Checking**: Validates column existence before execution
+- **Optional Introspection**: `--type-check` flag reads file schemas
+- **File Format Support**: CSV, Excel, JSON, Parquet
+- **14 High-Impact Operations**: select, filter operations, transformations, joins, cleaning
+- **Permissive Mode**: Only validates when schema is known (no slowdown without flag)
+- **Smart Error Messages**: Shows available columns when validation fails
+
+**Impact**: Catches column typos and missing columns at compile-time instead of runtime
+
+**Example:**
+```bash
+# Enable column validation
+python noeta_runner.py script.noeta --type-check
+
+# Error caught at compile-time:
+# Semantic Error: Column 'pric' does not exist in dataset 'sales'
+# Hint: Available columns: product_id, category, price, quantity, discount, date
+```
+
 ### Error Infrastructure Features
 
 - ✅ **4 Error Categories**: Lexical, Syntax, Semantic, Type errors

@@ -1,0 +1,110 @@
+# Column-Level Validation Demonstration
+# ========================================
+# This file demonstrates Noeta's compile-time column validation feature.
+#
+# Usage:
+#   python noeta_runner.py examples/test_column_validation.noeta --type-check
+#
+# With --type-check flag:
+#   - Noeta reads file headers to get column schemas
+#   - Validates column references at compile-time
+#   - Shows helpful error messages with available columns
+#
+# Without --type-check flag:
+#   - Validation is skipped (fast compilation)
+#   - Column errors only detected at runtime
+
+# ========================================
+# Part 1: Valid Column Usage (Works with or without --type-check)
+# ========================================
+
+load "data/sales_data.csv" as sales
+
+# Valid select operation - all columns exist
+select sales {price, quantity, category} as sales_subset
+
+# Valid transformation - column exists
+upper sales_subset column category as uppercased
+
+describe uppercased
+
+# ========================================
+# Part 2: Invalid Column Usage (Errors caught with --type-check)
+# ========================================
+# Uncomment the lines below to test column validation errors
+# Run with: python noeta_runner.py examples/test_column_validation.noeta --type-check
+
+# ERROR 1: Typo in column name
+# select sales {price, quantit} as typo_test
+# Expected error: Column 'quantit' does not exist
+# Hint: Available columns: product_id, category, customer_id, price, quantity, discount, date
+
+# ERROR 2: Completely invalid column
+# select sales {invalid_column_name} as invalid_test
+# Expected error: Column 'invalid_column_name' does not exist
+
+# ERROR 3: Multiple invalid columns (multi-error reporting)
+# select sales {price, bad_col1, bad_col2} as multi_error
+# Expected: Shows all 2 errors at once
+
+# ERROR 4: Invalid column in filter operation
+# filter_contains sales column nonexistent_col with pattern="test" as filter_error
+# Expected error: Column 'nonexistent_col' does not exist
+
+# ERROR 5: Invalid column in transformation
+# upper sales column fake_column as transform_error
+# Expected error: Column 'fake_column' does not exist
+
+# ERROR 6: Invalid grouping column
+# groupby sales by {invalid_group_col} compute {sum: price} as groupby_error
+# Expected error: Column 'invalid_group_col' does not exist
+
+# ========================================
+# Part 3: Testing Different Operations
+# ========================================
+# The following operations all support column validation:
+#
+# Selection & Filtering:
+#   - select, filter_between, filter_isin, filter_contains, filter_null
+#
+# Transformation:
+#   - upper, lower, round, astype
+#
+# Aggregation:
+#   - groupby (validates group_columns)
+#
+# Joining:
+#   - join, merge (validates join keys in both datasets)
+#
+# Cleaning:
+#   - dropna, fillna
+
+# ========================================
+# Part 4: Advanced Examples
+# ========================================
+
+# Example 1: Chain operations with column tracking
+select sales {price, quantity, category} as sales_3col
+upper sales_3col column category as sales_upper
+
+# With --type-check, the schema is tracked through the chain:
+# - sales_3col has columns: {price, quantity, category}
+# - sales_upper has columns: {price, quantity, category} (category uppercased)
+
+# Example 2: Multiple operations demonstrating validation
+lower sales_upper column category as sales_lower
+select sales_lower {price, quantity} as final_data
+describe final_data
+
+# ========================================
+# Summary
+# ========================================
+# Column-level validation provides:
+# ✅ Compile-time error detection
+# ✅ Helpful error messages with available columns
+# ✅ Support for 14 high-impact operations
+# ✅ Optional flag (--type-check) - fast by default
+# ✅ Multiple file formats: CSV, Excel, JSON, Parquet
+# ✅ Multi-error reporting (see all column errors at once)
+#
+# Impact: Catch typos and missing columns before execution!
