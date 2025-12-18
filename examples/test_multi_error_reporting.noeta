@@ -1,0 +1,27 @@
+# Multi-Error Reporting Test
+# This file demonstrates Noeta's ability to show all semantic errors at once
+# instead of stopping at the first error.
+
+# Load valid datasets
+load "data/sales_data.csv" as sales
+load "data/sales_data.csv" as customers
+
+# These operations will trigger multiple semantic errors:
+# 1. Typo in dataset name (sale instead of sales)
+select sale with price as prices
+
+# 2. Another typo (custmer instead of customers)
+filter custmer where price > 100 as expensive
+
+# 3. Completely undefined dataset
+describe nonexistent_data
+
+# 4. Another undefined dataset in simple operation
+upper missing_dataset column name as upper_names
+
+# Expected output: All 4 errors shown together, grouped by category (Semantic Errors)
+# Each error will show:
+# - Line and column number
+# - Error message
+# - Hint with available datasets
+# - "Did you mean" suggestion (for typos)

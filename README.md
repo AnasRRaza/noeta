@@ -18,6 +18,8 @@ Noeta is a production-ready Domain-Specific Language (DSL) for data analysis tha
 - ✅ **Flexible Execution**: Run via command line, Jupyter notebooks, or VS Code
 - ✅ **Optimized Output**: Compiles to efficient pandas/numpy/scikit-learn code
 - ✅ **Type Safe**: AST-based compilation with proper type checking
+- ✅ **Smart Error Detection**: Semantic validation catches errors at compile-time
+- ✅ **Helpful Error Messages**: Multi-error reporting shows all errors with suggestions
 - ✅ **Well Documented**: 13,400+ lines of comprehensive documentation
 
 ### Quick Example
@@ -157,6 +159,69 @@ assert_range sales column age min=0 max=120
 boxplot sales columns {price, quantity}
 heatmap sales columns {price, quantity, discount}
 ```
+
+---
+
+## Error Handling
+
+Noeta provides production-quality error messages with compile-time validation:
+
+### Semantic Validation
+
+Noeta catches errors **before execution** through semantic analysis:
+
+```noeta
+# This code has errors - undefined datasets
+select sale with price as prices    # Typo: 'sale' instead of 'sales'
+filter custmer where age > 25 as adults  # Typo: 'custmer' instead of 'customers'
+```
+
+Noeta shows **all errors at once** with helpful suggestions:
+
+```
+Found 2 errors in compilation:
+
+Semantic Errors (2):
+------------------------------------------------------------
+
+[Error 1]
+  Line 1, column 8:
+      1 | select sale with price as prices
+                 ^^^^
+    Dataset 'sale' has not been loaded or created
+  Hint: Available datasets: sales, customers
+  Did you mean: Did you mean 'sales'?
+
+[Error 2]
+  Line 2, column 8:
+      2 | filter custmer where age > 25 as adults
+                 ^^^^^^^
+    Dataset 'custmer' has not been loaded or created
+  Hint: Available datasets: sales, customers
+  Did you mean: Did you mean 'customers'?
+
+============================================================
+Total: 2 errors found
+```
+
+### Error Categories
+
+- **Lexical Errors**: Invalid characters or malformed tokens
+- **Syntax Errors**: Incorrect language syntax
+- **Semantic Errors**: Undefined datasets, type mismatches, invalid references
+- **Type Errors**: Incompatible data types for operations
+
+### Features
+
+- ✅ **Multi-Error Reporting**: See all errors at once, not just the first
+- ✅ **Source Context**: Errors show line, column, and source code snippet
+- ✅ **Smart Suggestions**: "Did you mean?" suggestions for typos
+- ✅ **Helpful Hints**: Context-aware hints for common mistakes
+- ✅ **Color Coding**: Terminal-friendly colored output
+
+### Example
+
+See `examples/test_multi_error_reporting.noeta` for a demonstration of the multi-error reporting system.
 
 ---
 

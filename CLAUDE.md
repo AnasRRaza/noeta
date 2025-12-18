@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Project Maturity**: Production Ready (67% of planned features implemented, 167/250 operations)
 **Codebase Size**: ~9,100 lines of core implementation code + ~10,300 lines of documentation
-**Last Major Update**: December 17, 2025 - **Semantic Validation System Added** ✅
+**Last Major Update**: December 19, 2025 - **Multi-Error Reporting Added** ✅ (Dec 17: Semantic Validation)
 
 **For comprehensive visual documentation of the entire system architecture and execution flow, see `FLOW_DIAGRAM.md` which contains 10 detailed Mermaid diagrams covering:**
 - System architecture and component interactions
@@ -305,6 +305,52 @@ The parser maintains position state (`self.pos`) and provides helper methods:
 
 ### Error Handling
 
+Noeta provides production-quality error handling with comprehensive compile-time validation:
+
+#### Multi-Error Reporting (NEW: December 19, 2025) ✅
+
+The compiler now shows **all errors at once** instead of stopping at the first error:
+
+```python
+# In noeta_runner.py
+if errors:
+    if len(errors) == 1:
+        raise errors[0]  # Single error - use normal format
+    else:
+        raise create_multi_error(errors)  # Multiple errors - grouped format
+```
+
+**Features**:
+- Shows all semantic errors in one pass
+- Groups errors by category (Lexical, Syntax, Semantic, Type)
+- Numbered error list for easy tracking
+- Each error shows: line, column, source context, message, hint, suggestion
+- Color-coded terminal output with ANSI colors
+
+**Implementation**:
+- `MultiErrorFormatter` class in `noeta_errors.py` handles formatting
+- `create_multi_error()` function combines multiple errors into single exception
+- See `examples/test_multi_error_reporting.noeta` for demonstration
+
+#### Error Infrastructure
+
+**Files**:
+- `noeta_errors.py`: Error classes, formatters, and utilities
+  - `NoetaError`: Base error class with rich formatting
+  - `ErrorCategory`: Enum for error types (LEXER, SYNTAX, SEMANTIC, TYPE, RUNTIME)
+  - `ErrorContext`: Line/column/source tracking
+  - `ErrorFormatter`: Single error formatting with color support
+  - `MultiErrorFormatter`: Multiple error formatting (NEW)
+  - Suggestion functions: `suggest_similar()`, `levenshtein_distance()`
+
+**Error Categories**:
+1. **Lexical Errors**: Invalid characters, unterminated strings
+2. **Syntax Errors**: Grammar violations, unexpected tokens
+3. **Semantic Errors**: Undefined datasets, invalid references (caught at compile-time!)
+4. **Type Errors**: Type mismatches, invalid operations
+5. **Runtime Errors**: Execution failures
+
+**Verbose Mode**:
 The runner script provides verbose output by default, showing:
 1. Generated Python code
 2. Execution output

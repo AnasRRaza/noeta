@@ -9,7 +9,7 @@ from noeta_lexer import Lexer
 from noeta_parser import Parser
 from noeta_codegen import CodeGenerator
 from noeta_semantic import SemanticAnalyzer
-from noeta_errors import NoetaError
+from noeta_errors import NoetaError, create_multi_error
 
 def compile_noeta(source_code: str) -> str:
     """Compile Noeta source code to Python code."""
@@ -27,8 +27,11 @@ def compile_noeta(source_code: str) -> str:
         errors = analyzer.analyze(ast)
 
         if errors:
-            # Raise the first error (could show all errors in future)
-            raise errors[0]
+            # Show all errors if multiple, or single error if just one
+            if len(errors) == 1:
+                raise errors[0]
+            else:
+                raise create_multi_error(errors)
 
         # Code generation
         generator = CodeGenerator()

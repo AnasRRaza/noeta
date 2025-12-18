@@ -400,3 +400,171 @@ def create_type_error(
     """
     context = ErrorContext(line, column, length, source_line)
     return NoetaError(message, ErrorCategory.TYPE, context, hint, suggestion)
+
+
+class MultiErrorFormatter:
+    """Formats multiple NoetaError instances into a single comprehensive error."""
+
+    @staticmethod
+    def group_errors_by_category(errors: List[NoetaError]) -> dict:
+        """
+        Group errors by their category.
+
+        Args:
+            errors: List of NoetaError instances
+
+        Returns:
+            Dictionary mapping ErrorCategory to list of errors
+        """
+        grouped = {}
+        for error in errors:
+            category = error.category
+            if category not in grouped:
+                grouped[category] = []
+            grouped[category].append(error)
+        return grouped
+
+    @staticmethod
+    def format_multiple(errors: List[NoetaError]) -> str:
+        """
+        Format multiple errors into a comprehensive error message.
+
+        Args:
+            errors: List of NoetaError instances
+
+        Returns:
+            Formatted error message showing all errors
+        """
+        if not errors:
+            return "No errors to display"
+
+        if len(errors) == 1:
+            # Single error - use normal formatting
+            return ErrorFormatter.format(errors[0])
+
+        lines = []
+
+        # Header
+        RED = ErrorFormatter.RED
+        BOLD = ErrorFormatter.BOLD
+        RESET = ErrorFormatter.RESET
+
+        header = f"Found {len(errors)} errors in compilation:"
+        if ErrorFormatter._supports_color():
+            lines.append(f"{RED}{BOLD}{header}{RESET}")
+        else:
+            lines.append(header)
+
+        lines.append("")
+
+        # Group errors by category
+        grouped = MultiErrorFormatter.group_errors_by_category(errors)
+
+        # Display errors grouped by category
+        error_num = 1
+        for category in [ErrorCategory.LEXER, ErrorCategory.SYNTAX, ErrorCategory.SEMANTIC, ErrorCategory.TYPE, ErrorCategory.RUNTIME]:
+            if category not in grouped:
+                continue
+
+            category_errors = grouped[category]
+
+            # Category header
+            category_header = f"\n{category.value}s ({len(category_errors)}):"
+            if ErrorFormatter._supports_color():
+                lines.append(f"{BOLD}{category_header}{RESET}")
+            else:
+                lines.append(category_header)
+            lines.append("-" * 60)
+
+            # Display each error in this category
+            for error in category_errors:
+                lines.append(f"\n[Error {error_num}]")
+
+                # Format the error (without the category header since we already have it)
+                if error.context:
+                    location = f"  Line {error.context.line}, column {error.context.column}:"
+                    if ErrorFormatter._supports_color():
+                        lines.append(f"{RED}{location}{RESET}")
+                    else:
+                        lines.append(location)
+
+                    # Source code context
+                    if error.context.source_line:
+                        lines.append(ErrorFormatter._format_source_context(error.context))
+
+                # Error message
+                message = f"    {error.message}"
+                if ErrorFormatter._supports_color():
+                    lines.append(f"{RED}{message}{RESET}")
+                else:
+                    lines.append(message)
+
+                # Hint
+                if error.hint:
+                    hint = f"  Hint: {error.hint}"
+                    if ErrorFormatter._supports_color():
+                        lines.append(f"{ErrorFormatter.YELLOW}{hint}{RESET}")
+                    else:
+                        lines.append(hint)
+
+                # Suggestion
+                if error.suggestion:
+                    suggestion = f"  Did you mean: {error.suggestion}"
+                    if ErrorFormatter._supports_color():
+                        lines.append(f"{ErrorFormatter.GREEN}{suggestion}{RESET}")
+                    else:
+                        lines.append(suggestion)
+
+                error_num += 1
+
+        # Footer
+        lines.append("")
+        lines.append("=" * 60)
+        footer = f"Total: {len(errors)} error{'s' if len(errors) != 1 else ''} found"
+        if ErrorFormatter._supports_color():
+            lines.append(f"{RED}{BOLD}{footer}{RESET}")
+        else:
+            lines.append(footer)
+
+        return "\n".join(lines)
+
+
+def create_multi_error(errors: List[NoetaError]) -> NoetaError:
+    """
+    Create a single error from multiple errors for display.
+
+    This function takes a list of errors and creates a single NoetaError
+    that contains a formatted message showing all errors grouped by category.
+
+    Args:
+        errors: List of NoetaError instances
+
+    Returns:
+        Single NoetaError with formatted message containing all errors
+
+    Example:
+        errors = [
+            create_semantic_error("Dataset 'foo' not found", 1, 5, "select foo..."),
+            create_semantic_error("Dataset 'bar' not found", 2, 8, "filter bar..."),
+        ]
+        multi_error = create_multi_error(errors)
+        raise multi_error
+    """
+    if not errors:
+        return NoetaError("No errors to display", ErrorCategory.RUNTIME)
+
+    if len(errors) == 1:
+        return errors[0]
+
+    # Create comprehensive error message
+    formatted_message = MultiErrorFormatter.format_multiple(errors)
+
+    # Create a wrapper error with the multi-error message
+    # Use the first error's category as the primary category
+    return NoetaError(
+        message=formatted_message,
+        category=errors[0].category,
+        context=None,  # No single context for multiple errors
+        hint=None,
+        suggestion=None
+    )
